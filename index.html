@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CYBER BOARD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#05060f; --panel:#0a0f22; --line:rgba(0,240,255,.22);
+  --cy:#00f0ff; --mg:#ff2bd6; --yl:#f6ff00; --tx:#d7f6ff; --dim:#6f8aa5;
+  --disp:"Orbitron","Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--bg); color:var(--tx);
+  font-family:"Segoe UI","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  background-image:
+    linear-gradient(rgba(0,240,255,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,240,255,.06) 1px,transparent 1px),
+    radial-gradient(ellipse at 50% -10%,rgba(255,43,214,.18),transparent 60%);
+  background-size:40px 40px,40px 40px,100% 100%;
+  background-attachment:fixed;
+}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);opacity:.5}
+#app{max-width:1040px;margin:0 auto;padding:16px;position:relative;z-index:1}
+
+.logo{font-family:var(--disp);font-weight:900;letter-spacing:.14em;margin:0;
+  color:var(--cy);text-shadow:0 0 12px var(--cy),0 0 32px rgba(0,240,255,.5)}
+.logo span{color:var(--mg);text-shadow:0 0 12px var(--mg),0 0 32px rgba(255,43,214,.5)}
+.sub{font-family:var(--disp);font-size:11px;letter-spacing:.3em;color:var(--dim);margin:6px 0 0}
+
+.panel{background:linear-gradient(180deg,rgba(10,15,34,.95),rgba(6,9,22,.95));
+  border:1px solid var(--line);padding:18px;position:relative;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px));
+  box-shadow:inset 0 0 30px rgba(0,240,255,.05)}
+h2{font-family:var(--disp);font-size:12px;letter-spacing:.22em;color:var(--cy);margin:0 0 12px}
+h2:not(:first-child){margin-top:22px}
+
+label{display:block;font-family:var(--disp);font-size:10px;letter-spacing:.25em;color:var(--dim);margin:14px 0 6px}
+input{width:100%;background:#03050d;border:1px solid var(--line);color:var(--tx);
+  padding:12px;font-size:16px;outline:none;font-family:inherit}
+input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
+#code{font-family:var(--disp);letter-spacing:.4em;text-transform:uppercase;text-align:center}
+
+.btn{display:inline-block;width:100%;margin-top:14px;padding:12px 14px;cursor:pointer;
+  background:transparent;border:1px solid var(--cy);color:var(--cy);
+  font-family:inherit;font-weight:700;font-size:14px;letter-spacing:.08em;
+  transition:.15s;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px))}
+.btn:hover:not(:disabled){background:rgba(0,240,255,.14);box-shadow:0 0 18px rgba(0,240,255,.45)}
+.btn.primary{background:var(--cy);color:#001318}
+.btn.primary:hover:not(:disabled){background:#7ff8ff}
+.btn.mg{border-color:var(--mg);color:var(--mg)}
+.btn.mg:hover:not(:disabled){background:rgba(255,43,214,.14);box-shadow:0 0 18px rgba(255,43,214,.45)}
+.btn.sm{width:auto;margin:0;padding:7px 12px;font-size:12px}
+.btn.big{font-family:var(--disp);letter-spacing:.3em;padding:16px;font-size:16px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+.entry{max-width:420px;margin:8vh auto 0;text-align:center}
+.entry .logo{font-size:clamp(30px,9vw,46px)}
+.entry .panel{margin-top:28px;text-align:left}
+.or{text-align:center;color:var(--dim);font-family:var(--disp);font-size:10px;letter-spacing:.3em;margin:20px 0 0}
+.err{color:var(--mg);font-size:13px;min-height:1.2em;margin:14px 0 0}
+.wait{text-align:center;margin-top:30vh;font-family:var(--disp);letter-spacing:.2em;color:var(--cy);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.35}}
+
+.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px}
+.top .logo{font-size:20px;margin-right:auto}
+.room{font-family:var(--disp);font-size:12px;letter-spacing:.15em;color:var(--dim)}
+.room b{color:var(--yl);font-size:18px;letter-spacing:.3em;margin-left:6px;text-shadow:0 0 10px rgba(246,255,0,.6)}
+.offline{background:rgba(255,43,214,.12);border:1px solid var(--mg);color:var(--mg);padding:10px 14px;margin-bottom:14px;font-size:13px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media(max-width:820px){.layout{grid-template-columns:1fr}}
+
+.games{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.game{background:#03050d;border:1px solid var(--line);color:var(--tx);padding:16px 12px;cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
+.game b{display:block;font-size:17px;margin-bottom:6px}
+.game small{color:var(--dim);font-size:12px;line-height:1.5;display:block}
+.game.on{border-color:var(--cy);box-shadow:0 0 18px rgba(0,240,255,.4),inset 0 0 18px rgba(0,240,255,.12)}
+.game.on b{color:var(--cy)}
+.game:disabled{cursor:default}
+.note{color:var(--dim);font-size:13px;margin:0 0 12px}
+
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.vs>span{font-family:var(--disp);font-weight:900;color:var(--dim)}
+.slot{border:1px solid;padding:12px 8px;text-align:center;min-width:0}
+.slot small{display:block;font-family:var(--disp);font-size:9px;letter-spacing:.2em;margin-bottom:4px}
+.slot div{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c1{color:var(--cy);border-color:var(--cy)}
+.c2{color:var(--mg);border-color:var(--mg)}
+.slot.empty div{opacity:.4;font-weight:400}
+
+.score{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.pl{border:1px solid;padding:8px 12px;display:flex;align-items:center;gap:10px;opacity:.5;min-width:0}
+.pl.act{opacity:1;box-shadow:0 0 16px currentColor,inset 0 0 14px rgba(255,255,255,.06)}
+.pl span{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl b{font-family:var(--disp);font-size:20px}
+.dot{width:14px;height:14px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor;flex:none}
+.msg{text-align:center;padding:10px;margin-bottom:10px;font-weight:700;border:1px dashed var(--line);min-height:44px}
+.msg.win{border:1px solid var(--yl);color:var(--yl);font-size:18px;text-shadow:0 0 10px rgba(246,255,0,.6);box-shadow:0 0 20px rgba(246,255,0,.25)}
+.msg small{display:block;font-weight:400;color:var(--dim);font-size:12px;margin-top:2px;text-shadow:none}
+
+.board{display:grid;grid-template-columns:repeat(var(--n),1fr);width:min(100%,560px);aspect-ratio:1;margin:0 auto;
+  background:#03060f;border:1px solid var(--cy);box-shadow:0 0 24px rgba(0,240,255,.35),inset 0 0 40px rgba(0,240,255,.06)}
+.cell{position:relative;border:0;background:transparent;padding:0;margin:0;cursor:pointer;min-width:0}
+.cell:disabled{cursor:default}
+.reversi .cell{border:1px solid rgba(0,240,255,.16)}
+.gomoku .cell{background:
+  linear-gradient(rgba(0,240,255,.28),rgba(0,240,255,.28)) center/100% 1px no-repeat,
+  linear-gradient(rgba(0,240,255,.28),rgba(0,240,255,.28)) center/1px 100% no-repeat}
+.cell:not(:disabled):hover{background-color:rgba(246,255,0,.14)}
+.reversi .hint::after{content:"";position:absolute;inset:40%;border-radius:50%;background:var(--yl);opacity:.75;box-shadow:0 0 8px var(--yl)}
+.stone{position:absolute;inset:11%;border-radius:50%;display:block}
+.gomoku .stone{inset:7%}
+.s1{background:radial-gradient(circle at 35% 30%,#d9ffff,#00f0ff 45%,#00596b);box-shadow:0 0 10px var(--cy)}
+.s2{background:radial-gradient(circle at 35% 30%,#ffe0f8,#ff2bd6 45%,#5d0a4c);box-shadow:0 0 10px var(--mg)}
+.last .stone{outline:2px solid var(--yl);outline-offset:1px}
+.win .stone{animation:pulse .8s infinite alternate}
+@keyframes pulse{to{box-shadow:0 0 20px 4px var(--yl);transform:scale(1.08)}}
+.actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
+
+.members{list-style:none;margin:0;padding:0}
+.members li{padding:10px 0;border-bottom:1px solid rgba(0,240,255,.12)}
+.members li:last-child{border:0}
+.mrow{display:flex;align-items:center;gap:8px}
+.mrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow em{font-style:normal;color:var(--dim);font-size:11px}
+.badge{font-family:var(--disp);font-size:9px;letter-spacing:.12em;border:1px solid;padding:3px 6px;flex:none}
+.badge.spec{color:var(--dim)}
+.off{opacity:.4}
+.roles{display:flex;gap:6px;margin-top:8px}
+.roles button{flex:1;background:transparent;border:1px solid var(--line);color:var(--dim);padding:6px 2px;font-size:11px;cursor:pointer;font-family:inherit}
+.roles button.on.r1{border-color:var(--cy);color:var(--cy);background:rgba(0,240,255,.12)}
+.roles button.on.r2{border-color:var(--mg);color:var(--mg);background:rgba(255,43,214,.12)}
+.roles button.on.r0{border-color:var(--tx);color:var(--tx)}
+.roles button.x{flex:none;width:30px;color:var(--mg)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+//<LOGIC>
+const GAMES = {
+  reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
+  gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' }
+};
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+
+function newBoard(game) {
+  const n = GAMES[game].size, b = new Array(n * n).fill(0);
+  if (game === 'reversi') { b[27] = 2; b[28] = 1; b[35] = 1; b[36] = 2; }
+  return b;
+}
+function flips(b, x, y, c) {
+  if (b[y * 8 + x]) return [];
+  const o = 3 - c; let out = [];
+  for (const [dx, dy] of DIRS) {
+    let cx = x + dx, cy = y + dy; const line = [];
+    while (cx >= 0 && cx < 8 && cy >= 0 && cy < 8 && b[cy * 8 + cx] === o) { line.push(cy * 8 + cx); cx += dx; cy += dy; }
+    if (line.length && cx >= 0 && cx < 8 && cy >= 0 && cy < 8 && b[cy * 8 + cx] === c) out = out.concat(line);
+  }
+  return out;
+}
+function legal(b, c) { const r = []; for (let i = 0; i < 64; i++) if (flips(b, i % 8, i >> 3, c).length) r.push(i); return r; }
+function count(b, c) { return b.filter(v => v === c).length; }
+function fiveAt(b, x, y, c) {
+  const n = 15;
+  for (const [dx, dy] of [[1,0],[0,1],[1,1],[1,-1]]) {
+    const line = [y * n + x];
+    for (const s of [1, -1]) {
+      let cx = x + dx * s, cy = y + dy * s;
+      while (cx >= 0 && cx < n && cy >= 0 && cy < n && b[cy * n + cx] === c) { line.push(cy * n + cx); cx += dx * s; cy += dy * s; }
+    }
+    if (line.length >= 5) return line;
+  }
+  return null;
+}
+function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
+function applyMove(s, i, c) {
+  if (s.phase !== 'playing' || !c || s.turn !== c) return false;
+  if (!Number.isInteger(i) || i < 0 || i >= s.board.length || s.board[i]) return false;
+  const n = GAMES[s.game].size, x = i % n, y = Math.floor(i / n);
+  if (s.game === 'reversi') {
+    const f = flips(s.board, x, y, c);
+    if (!f.length) return false;
+    s.board[i] = c; f.forEach(j => s.board[j] = c); s.last = i; s.passed = 0;
+    const o = 3 - c;
+    if (legal(s.board, o).length) s.turn = o;
+    else if (legal(s.board, c).length) { s.passed = o; s.turn = c; }
+    else { const a = count(s.board, 1), d = count(s.board, 2); finish(s, a > d ? 1 : d > a ? 2 : 0, 'count'); }
+  } else {
+    s.board[i] = c; s.last = i;
+    const l = fiveAt(s.board, x, y, c);
+    if (l) { s.line = l; finish(s, c, 'five'); }
+    else if (s.board.every(v => v)) finish(s, 0, 'full');
+    else s.turn = 3 - c;
+  }
+  return true;
+}
+//</LOGIC>
+
+const PREFIX = 'cyberboard-v1-';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get(k, session) { try { return (session ? sessionStorage : localStorage).getItem(k); } catch (e) { return null; } },
+  set(k, v, session) { try { (session ? sessionStorage : localStorage).setItem(k, v); } catch (e) {} },
+  del(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
+};
+const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < n; i++) s += ch[Math.floor(Math.random() * ch.length)]; return s; };
+
+const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
+store.set('cb_cid', me.cid, true);
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false };
+let S = null, peer = null, hostConn = null, conns = {}, joinTimer = 0, retryTimer = 0, rehost = false;
+
+// ---------- state helpers ----------
+const memberOf = role => S.members.find(m => m.role === role);
+const colorOf = cid => { const m = S.members.find(m => m.cid === cid); return m ? (m.role === 'p1' ? 1 : m.role === 'p2' ? 2 : 0) : 0; };
+const nameOf = c => { const m = memberOf(c === 1 ? 'p1' : 'p2'); return m ? m.name : '???'; };
+
+// ---------- host ----------
+function hostInit() {
+  S = { phase: 'lobby', game: 'reversi', members: [{ cid: me.cid, name: me.name, role: 'p1', online: true, host: true }],
+        board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
+}
+function broadcast() {
+  for (const c of Object.values(conns)) if (c.open) { try { c.send({ t: 'state', s: S }); } catch (e) {} }
+  render();
+}
+function handle(cid, msg) {
+  if (msg.t === 'move') { if (applyMove(S, msg.i, colorOf(cid))) broadcast(); }
+  else if (msg.t === 'resign') { const c = colorOf(cid); if (S.phase === 'playing' && c) { finish(S, 3 - c, 'resign'); broadcast(); } }
+}
+function act(msg) {
+  if (me.isHost) handle(me.cid, msg);
+  else if (hostConn && hostConn.open) hostConn.send(msg);
+}
+function startGame() {
+  if (!memberOf('p1') || !memberOf('p2')) return;
+  Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0 });
+  broadcast();
+}
+function setRole(cid, role) {
+  if (S.phase !== 'lobby') return;
+  const m = S.members.find(m => m.cid === cid); if (!m) return;
+  if (role !== 'spec') { const cur = memberOf(role); if (cur && cur !== m) cur.role = 'spec'; }
+  m.role = role; broadcast();
+}
+function onConn(conn) {
+  let cid = null;
+  conn.on('data', msg => {
+    if (!msg || typeof msg !== 'object' || !S) return;
+    if (msg.t === 'hello') {
+      cid = String(msg.cid || '').slice(0, 40); if (!cid || cid === me.cid) { cid = null; return; }
+      const name = String(msg.name || 'GUEST').slice(0, 12);
+      if (conns[cid] && conns[cid] !== conn) { try { conns[cid].close(); } catch (e) {} }
+      conns[cid] = conn;
+      const m = S.members.find(m => m.cid === cid);
+      if (m) { m.online = true; m.name = name; } else S.members.push({ cid, name, role: 'spec', online: true });
+      broadcast();
+    } else if (cid && conns[cid] === conn) handle(cid, msg);
+  });
+  conn.on('close', () => {
+    if (!cid || conns[cid] !== conn || !S) return;
+    delete conns[cid];
+    const m = S.members.find(m => m.cid === cid);
+    if (m) { if (m.role === 'spec') S.members = S.members.filter(x => x !== m); else m.online = false; }
+    broadcast();
+  });
+}
+function createRoom(tries) {
+  tries = tries || 0;
+  me.isHost = true; if (!me.code) me.code = rnd(5);
+  ui.screen = 'connecting'; ui.status = 'CREATING ROOM...'; render();
+  peer = new Peer(PREFIX + me.code);
+  peer.on('open', () => {
+    if (!S) hostInit();
+    store.set('cb_host', me.code, true);
+    history.replaceState(null, '', '?room=' + me.code);
+    ui.screen = 'room'; ui.offline = false; render();
+  });
+  peer.on('connection', onConn);
+  peer.on('disconnected', () => { if (peer && !peer.destroyed) { ui.offline = true; render(); setTimeout(() => { if (peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 2000); } });
+  peer.on('error', e => {
+    if (S) return;
+    if (e.type === 'unavailable-id') {
+      peer.destroy();
+      if (rehost && tries < 6) setTimeout(() => createRoom(tries + 1), 2500);
+      else if (!rehost) { me.code = rnd(5); createRoom(); }
+      else fail('ルームを復元できませんでした。新しく作り直してください。');
+    } else fail('接続サーバーに繋がりませんでした（' + e.type + '）');
+  });
+}
+
+// ---------- guest ----------
+function joinRoom() {
+  me.isHost = false;
+  ui.screen = 'connecting'; ui.status = 'CONNECTING...'; render();
+  peer = new Peer();
+  peer.on('open', connectHost);
+  peer.on('disconnected', () => { setTimeout(() => { if (peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 2000); });
+  peer.on('error', e => {
+    if (e.type === 'peer-unavailable') { if (S) schedRetry(); else fail('ルームが見つかりません。コードを確認してください。'); }
+    else if (!S) fail('接続できませんでした（' + e.type + '）');
+  });
+}
+function connectHost() {
+  clearTimeout(joinTimer);
+  if (!peer || peer.destroyed) return;
+  const c = hostConn = peer.connect(PREFIX + me.code, { reliable: true, serialization: 'json' });
+  joinTimer = setTimeout(() => {
+    if (c.open) return;
+    if (S) schedRetry();
+    else fail('ホストに接続できませんでした。ネットワーク環境（モバイル回線・学校や会社のLANなど）が原因の可能性があります。');
+  }, 15000);
+  c.on('open', () => { clearTimeout(joinTimer); c.send({ t: 'hello', cid: me.cid, name: me.name }); });
+  c.on('data', m => {
+    if (!m || m.t !== 'state') return;
+    S = m.s; ui.screen = 'room'; ui.offline = false;
+    history.replaceState(null, '', '?room=' + me.code); render();
+  });
+  c.on('close', () => { if (hostConn === c && S) { ui.offline = true; render(); schedRetry(); } });
+}
+function schedRetry() {
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => {
+    if (!peer || peer.destroyed) return;
+    if (peer.disconnected) { peer.reconnect(); schedRetry(); } else connectHost();
+  }, 3000);
+}
+function fail(msg) {
+  clearTimeout(joinTimer); clearTimeout(retryTimer);
+  try { if (peer) peer.destroy(); } catch (e) {}
+  peer = null; hostConn = null; conns = {}; S = null; rehost = false; store.del('cb_host');
+  ui.screen = 'entry'; ui.error = msg; render();
+}
+
+// ---------- views ----------
+function entryHTML() {
+  return `<div class="entry">
+    <h1 class="logo">CYBER<span>BOARD</span></h1>
+    <p class="sub">// ONLINE BOARD GAME TERMINAL</p>
+    <div class="panel">
+      <label for="name">PLAYER NAME</label>
+      <input id="name" maxlength="12" placeholder="なまえ" value="${esc(me.name)}">
+      <button class="btn primary" data-act="create">ルームを作る（ホスト）</button>
+      <div class="or">— OR —</div>
+      <label for="code">ROOM CODE</label>
+      <input id="code" maxlength="5" placeholder="XXXXX" value="${esc(me.code)}" autocomplete="off">
+      <button class="btn mg" data-act="join">ルームに参加する</button>
+      <p class="err">${esc(ui.error)}</p>
+    </div>
+  </div>`;
+}
+function slotHTML(role) {
+  const m = memberOf(role), c = role === 'p1' ? 1 : 2;
+  return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${c === 1 ? 'CYAN / 先手' : 'MAGENTA / 後手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
+}
+function boardHTML() {
+  const n = GAMES[S.game].size, my = colorOf(me.cid);
+  const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
+  const hints = new Set(myTurn && S.game === 'reversi' ? legal(S.board, my) : []);
+  let h = `<div class="board ${S.game}" style="--n:${n}">`;
+  S.board.forEach((v, i) => {
+    const cls = ['cell'];
+    if (i === S.last) cls.push('last');
+    if (S.line && S.line.includes(i)) cls.push('win');
+    if (hints.has(i)) cls.push('hint');
+    const can = myTurn && !v && (S.game === 'gomoku' || hints.has(i));
+    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : ''}</button>`;
+  });
+  return h + '</div>';
+}
+function msgHTML() {
+  const my = colorOf(me.cid);
+  if (S.phase === 'result') {
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
+    return `<div class="msg win">${t}<small>${why}</small></div>`;
+  }
+  let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
+  const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
+  return `<div class="msg">${t}${p}</div>`;
+}
+function mainHTML() {
+  const host = me.isHost, my = colorOf(me.cid);
+  if (S.phase === 'lobby') {
+    const ready = memberOf('p1') && memberOf('p2');
+    return `<section class="panel">
+      <h2>01 // SELECT GAME</h2>
+      <div class="games">${Object.entries(GAMES).map(([k, v]) =>
+        `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name}</b><small>${v.desc}</small></button>`).join('')}</div>
+      <h2>02 // MATCH UP</h2>
+      <p class="note">${host ? 'メンバー一覧で対戦する2人を選んでください。それ以外の人は観戦になります。' : 'ホストがゲームと対戦者を選んでいます…'}</p>
+      <div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>
+      ${host ? `<button class="btn primary big" data-act="start" ${ready ? '' : 'disabled'}>GAME START</button>` : ''}
+    </section>`;
+  }
+  const rev = S.game === 'reversi';
+  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : ''}</div>`;
+  let btn = '';
+  if (S.phase === 'playing') {
+    if (my) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
+    if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択へ</button>`;
+  } else if (host) {
+    btn += `<button class="btn sm primary" data-act="lobby">次のゲームを選ぶ</button>
+            <button class="btn sm" data-act="start">同じ組み合わせで再戦</button>
+            <button class="btn sm mg" data-act="swap">先手後手を入れ替えて再戦</button>`;
+  } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
+  return `<section class="panel">
+    <h2>${GAMES[S.game].name.toUpperCase()} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
+    <div class="score">${pl(1)}${pl(2)}</div>${msgHTML()}${boardHTML()}
+    <div class="actions">${btn}</div>
+  </section>`;
+}
+function sideHTML() {
+  const host = me.isHost, lobby = S.phase === 'lobby';
+  const items = S.members.map(m => {
+    const c = m.role === 'p1' ? 1 : m.role === 'p2' ? 2 : 0;
+    const badge = c ? `<b class="badge c${c}">${c === 1 ? 'CYAN' : 'MAGENTA'}</b>` : `<b class="badge spec">観戦</b>`;
+    const ctl = host && lobby ? `<div class="roles">
+        <button class="r1 ${c === 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p1">先手</button>
+        <button class="r2 ${c === 2 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p2">後手</button>
+        <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
+        ${!m.online ? `<button class="x" data-act="kick" data-cid="${esc(m.cid)}" title="削除">×</button>` : ''}
+      </div>` : '';
+    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)} <em>${m.host ? 'HOST' : ''}${m.cid === me.cid ? ' YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${ctl}</li>`;
+  }).join('');
+  return `<aside class="panel"><h2>MEMBERS // ${S.members.length}</h2><ul class="members">${items}</ul>
+    <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button></aside>`;
+}
+function roomHTML() {
+  return `<header class="top"><h1 class="logo">CYBER<span>BOARD</span></h1>
+      <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
+    ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
+    <div class="layout">${mainHTML()}${sideHTML()}</div>`;
+}
+function render() {
+  const app = $('#app');
+  if (ui.screen === 'entry') app.innerHTML = entryHTML();
+  else if (ui.screen === 'connecting' || !S) app.innerHTML = `<div class="wait">${esc(ui.status)}</div>`;
+  else app.innerHTML = roomHTML();
+}
+
+// ---------- events ----------
+function readEntry() {
+  me.name = ($('#name').value || '').trim().slice(0, 12);
+  me.code = ($('#code').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  if (!me.name) { ui.error = '名前を入力してください。'; render(); return false; }
+  store.set('cb_name', me.name); ui.error = ''; return true;
+}
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const a = el.dataset.act, host = me.isHost;
+  if (a === 'create') { if (readEntry()) { me.code = ''; rehost = false; createRoom(); } }
+  else if (a === 'join') { if (readEntry()) { if (me.code.length !== 5) { ui.error = 'ルームコード（5文字）を入力してください。'; render(); } else joinRoom(); } }
+  else if (a === 'copy') {
+    const url = location.origin + location.pathname + '?room=' + me.code;
+    const done = () => { ui.copied = true; render(); setTimeout(() => { ui.copied = false; if (S) render(); }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => prompt('招待リンク', url)); else prompt('招待リンク', url);
+  }
+  else if (a === 'move') act({ t: 'move', i: Number(el.dataset.i) });
+  else if (a === 'resign') { if (confirm('投了しますか？')) act({ t: 'resign' }); }
+  else if (!host || !S) return;
+  else if (a === 'game') { if (S.phase === 'lobby') { S.game = el.dataset.g; broadcast(); } }
+  else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
+  else if (a === 'kick') { S.members = S.members.filter(m => m.cid !== el.dataset.cid || m.online); broadcast(); }
+  else if (a === 'start') startGame();
+  else if (a === 'swap') { const a1 = memberOf('p1'), a2 = memberOf('p2'); if (a1 && a2) { a1.role = 'p2'; a2.role = 'p1'; startGame(); } }
+  else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
+});
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || ui.screen !== 'entry') return;
+  const b = document.querySelector(e.target.id === 'code' ? '[data-act=join]' : e.target.id === 'name' && me.code ? '[data-act=join]' : null);
+  if (b) b.click();
+});
+
+// ---------- boot ----------
+(function boot() {
+  const q = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  me.code = q;
+  if (typeof Peer === 'undefined') { ui.error = '通信ライブラリを読み込めませんでした。ネット接続を確認して再読み込みしてください。'; render(); return; }
+  if (q && me.name && store.get('cb_host', true) === q) { rehost = true; createRoom(); return; }
+  render();
+})();
+</script>
+</body>
+</html>
