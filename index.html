@@ -121,6 +121,14 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .last .stone{outline:2px solid var(--yl);outline-offset:1px}
 .win .stone{animation:pulse .8s infinite alternate}
 @keyframes pulse{to{box-shadow:0 0 20px 4px var(--yl);transform:scale(1.08)}}
+.cell,.pad button{touch-action:manipulation}
+.cell.sel{background-color:rgba(246,255,0,.25);outline:2px solid var(--yl);outline-offset:-1px;z-index:1}
+.ghost{opacity:.6}
+.pad{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.pad button{background:transparent;border:1px solid var(--line);color:var(--cy);font-size:18px;min-width:46px;min-height:48px;padding:0;cursor:pointer;font-family:inherit}
+.pad .put{flex:1;max-width:220px;background:var(--yl);color:#111;border-color:var(--yl);font-weight:700;font-size:15px}
+.pad button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:520px){#app{padding:8px}.panel{padding:14px 8px}}
 .actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
 
 .members{list-style:none;margin:0;padding:0}
@@ -218,7 +226,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1 };
 let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
 
 // ---------- state helpers ----------
@@ -383,8 +391,10 @@ function boardHTML() {
     if (i === S.last) cls.push('last');
     if (S.line && S.line.includes(i)) cls.push('win');
     if (hints.has(i)) cls.push('hint');
+    const sel = myTurn && S.game === 'gomoku' && i === ui.sel;
+    if (sel) cls.push('sel');
     const can = myTurn && !v && (S.game === 'gomoku' || hints.has(i));
-    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : ''}</button>`;
+    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
   });
   return h + '</div>';
 }
@@ -397,7 +407,8 @@ function msgHTML() {
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
-  return `<div class="msg">${t}${p}</div>`;
+  const g = S.game === 'gomoku' && my && S.turn === my ? '<small>マスをタップで選択 → 「ここに置く」で確定（矢印で微調整できます）</small>' : '';
+  return `<div class="msg">${t}${p}${g}</div>`;
 }
 function mainHTML() {
   const host = me.isHost, my = colorOf(me.cid);
@@ -415,8 +426,19 @@ function mainHTML() {
   }
   const rev = S.game === 'reversi';
   const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : ''}</div>`;
-  let btn = '';
+  let btn = '', pad = '';
   if (S.phase === 'playing') {
+    if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
+      if (ui.sel >= S.board.length) ui.sel = -1;
+      const ok = ui.sel >= 0 && !S.board[ui.sel];
+      pad = `<div class="pad">
+        <button data-act="nudge" data-d="3" aria-label="左へ">◀</button>
+        <button data-act="nudge" data-d="0" aria-label="上へ">▲</button>
+        <button class="put" data-act="put" ${ok ? '' : 'disabled'}>ここに置く</button>
+        <button data-act="nudge" data-d="2" aria-label="下へ">▼</button>
+        <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
+      </div>`;
+    }
     if (my) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
     if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択へ</button>`;
   } else if (host) {
@@ -426,7 +448,7 @@ function mainHTML() {
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
-    <div class="score">${pl(1)}${pl(2)}</div>${msgHTML()}${boardHTML()}
+    <div class="score">${pl(1)}${pl(2)}</div>${msgHTML()}${boardHTML()}${pad}
     <div class="actions">${btn}</div>
   </section>`;
 }
@@ -476,7 +498,18 @@ document.addEventListener('click', e => {
     const done = () => { ui.copied = true; render(); setTimeout(() => { ui.copied = false; if (S) render(); }, 1500); };
     if (navigator.clipboard) navigator.clipboard.writeText(url).then(done, () => prompt('招待リンク', url)); else prompt('招待リンク', url);
   }
-  else if (a === 'move') act({ t: 'move', i: Number(el.dataset.i) });
+  else if (a === 'move') {
+    const i = Number(el.dataset.i);
+    if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
+    else { ui.sel = -1; act({ t: 'move', i }); }
+  }
+  else if (a === 'put') { const i = ui.sel; ui.sel = -1; if (i >= 0) act({ t: 'move', i }); }
+  else if (a === 'nudge') {
+    const n = 15, d = Number(el.dataset.d), s = ui.sel < 0 ? 112 : ui.sel;
+    const x = s % n + (d === 1 ? 1 : d === 3 ? -1 : 0), y = Math.floor(s / n) + (d === 2 ? 1 : d === 0 ? -1 : 0);
+    if (ui.sel < 0) { ui.sel = s; render(); }
+    else if (x >= 0 && x < n && y >= 0 && y < n) { ui.sel = y * n + x; render(); }
+  }
   else if (a === 'resign') { if (confirm('投了しますか？')) act({ t: 'resign' }); }
   else if (!host || !S) return;
   else if (a === 'game') { if (S.phase === 'lobby') { S.game = el.dataset.g; broadcast(); } }
