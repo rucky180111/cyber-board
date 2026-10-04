@@ -9,7 +9,7 @@
 <style>
 :root{
   --bg:#05060f; --panel:#0a0f22; --line:rgba(0,240,255,.22);
-  --cy:#00f0ff; --mg:#ff2bd6; --yl:#f6ff00; --tx:#d7f6ff; --dim:#6f8aa5;
+  --cy:#00f0ff; --mg:#ff2bd6; --p3:#8dff3a; --p4:#ff9d2e; --yl:#f6ff00; --tx:#d7f6ff; --dim:#6f8aa5;
   --disp:"Orbitron","Segoe UI","Hiragino Sans","Yu Gothic UI",sans-serif;
 }
 *{box-sizing:border-box}
@@ -93,12 +93,19 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .note{color:var(--dim);font-size:13px;margin:0 0 12px}
 
 .vs{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center}
+.vs.four{grid-template-columns:1fr 1fr}
+.modes{display:flex;gap:10px;margin-top:12px}
+.modes button{flex:1;background:#03050d;border:1px solid var(--line);color:var(--dim);padding:10px;font-family:inherit;font-weight:700;cursor:pointer}
+.modes button.on{border-color:var(--cy);color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.35)}
+.modes button:disabled{cursor:default}
 .vs>span{font-family:var(--disp);font-weight:900;color:var(--dim)}
 .slot{border:1px solid;padding:12px 8px;text-align:center;min-width:0}
 .slot small{display:block;font-family:var(--disp);font-size:9px;letter-spacing:.2em;margin-bottom:4px}
 .slot div{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .c1{color:var(--cy);border-color:var(--cy)}
 .c2{color:var(--mg);border-color:var(--mg)}
+.c3{color:var(--p3);border-color:var(--p3)}
+.c4{color:var(--p4);border-color:var(--p4)}
 .slot.empty div{opacity:.4;font-weight:400}
 
 .score{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
@@ -125,6 +132,28 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .gomoku .stone{inset:7%}
 .s1{background:radial-gradient(circle at 35% 30%,#d9ffff,#00f0ff 45%,#00596b);box-shadow:0 0 10px var(--cy)}
 .s2{background:radial-gradient(circle at 35% 30%,#ffe0f8,#ff2bd6 45%,#5d0a4c);box-shadow:0 0 10px var(--mg)}
+.s3{background:radial-gradient(circle at 35% 30%,#f1ffe0,#8dff3a 45%,#2b5d0a);box-shadow:0 0 10px var(--p3)}
+.s4{background:radial-gradient(circle at 35% 30%,#fff1dc,#ff9d2e 45%,#6b3a05);box-shadow:0 0 10px var(--p4)}
+.qboard{position:relative;width:min(100%,540px);aspect-ratio:1;margin:12px auto}
+.qcell{position:absolute;width:9.091%;height:9.091%;border:1px solid rgba(0,240,255,.22);background:#03060f;padding:0;margin:0;cursor:pointer;touch-action:manipulation}
+.qcell:disabled{cursor:default}
+.qcell.hint{border-color:var(--yl);background:rgba(246,255,0,.14)}
+.qcell.hint::after{content:"";position:absolute;inset:36%;border-radius:50%;background:var(--yl);box-shadow:0 0 8px var(--yl)}
+.qwall{position:absolute;border-radius:2px;pointer-events:none;z-index:2;background:#fff}
+.qwall.w1{background:var(--cy);box-shadow:0 0 8px var(--cy)}
+.qwall.w2{background:var(--mg);box-shadow:0 0 8px var(--mg)}
+.qwall.w3{background:var(--p3);box-shadow:0 0 8px var(--p3)}
+.qwall.w4{background:var(--p4);box-shadow:0 0 8px var(--p4)}
+.qwall.new{outline:1px solid #fff}
+.qwall.ghost{background:var(--yl);box-shadow:0 0 12px var(--yl);z-index:4}
+.qwall.ghost.ng{background:#ff3344;box-shadow:0 0 12px #ff3344}
+.qanchor{position:absolute;width:11.364%;height:11.364%;background:transparent;border:0;padding:0;margin:0;z-index:3;cursor:pointer;touch-action:manipulation}
+.qanchor::after{content:"";position:absolute;inset:41%;border-radius:50%;background:rgba(246,255,0,.55)}
+.qgoal{position:absolute;background:currentColor;box-shadow:0 0 8px currentColor}
+.qgoal.top{left:0;right:0;top:-7px;height:3px}
+.qgoal.bottom{left:0;right:0;bottom:-7px;height:3px}
+.qgoal.left{top:0;bottom:0;left:-7px;width:3px}
+.qgoal.right{top:0;bottom:0;right:-7px;width:3px}
 .last .stone{outline:2px solid var(--yl);outline-offset:1px}
 .win .stone{animation:pulse .8s infinite alternate}
 @keyframes pulse{to{box-shadow:0 0 20px 4px var(--yl);transform:scale(1.08)}}
@@ -134,6 +163,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .pad{display:flex;gap:8px;justify-content:center;margin-top:12px}
 .pad button{background:transparent;border:1px solid var(--line);color:var(--cy);font-size:18px;min-width:46px;min-height:48px;padding:0;cursor:pointer;font-family:inherit}
 .pad .put{flex:1;max-width:220px;background:var(--yl);color:#111;border-color:var(--yl);font-weight:700;font-size:15px}
+.pad .wide{flex:1;font-size:14px;font-weight:700;padding:0 6px}
+.pad .wide.on{background:rgba(0,240,255,.16);border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.35)}
 .pad button:disabled{opacity:.35;cursor:not-allowed}
 @media(max-width:520px){#app{padding:8px}.panel{padding:14px 8px}}
 .actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
@@ -151,6 +182,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .roles button{flex:1;background:transparent;border:1px solid var(--line);color:var(--dim);padding:6px 2px;font-size:11px;cursor:pointer;font-family:inherit}
 .roles button.on.r1{border-color:var(--cy);color:var(--cy);background:rgba(0,240,255,.12)}
 .roles button.on.r2{border-color:var(--mg);color:var(--mg);background:rgba(255,43,214,.12)}
+.roles button.on.r3{border-color:var(--p3);color:var(--p3);background:rgba(141,255,58,.12)}
+.roles button.on.r4{border-color:var(--p4);color:var(--p4);background:rgba(255,157,46,.12)}
 .roles button.on.r0{border-color:var(--tx);color:var(--tx)}
 .roles button.x{flex:none;width:30px;color:var(--mg)}
 </style>
@@ -163,7 +196,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 const GAMES = {
   reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
   gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' },
-  connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' }
+  connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' },
+  quoridor: { name: 'コリドール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
@@ -212,9 +246,74 @@ function drops(b) {
   for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
   return r;
 }
+function qInit(np) {
+  return { pos: np === 2 ? [-1, 76, 4] : [-1, 76, 36, 4, 44], walls: np === 2 ? [0, 10, 10] : [0, 5, 5, 5, 5],
+           hw: new Array(64).fill(0), vw: new Array(64).fill(0) };
+}
+function qOpen(q, x, y, dx, dy) {
+  const nx = x + dx, ny = y + dy;
+  if (nx < 0 || nx > 8 || ny < 0 || ny > 8) return false;
+  const W = (a, wx, wy) => wx >= 0 && wx < 8 && wy >= 0 && wy < 8 && a[wy * 8 + wx];
+  if (dy) { const wy = dy > 0 ? y : y - 1; return !(W(q.hw, x, wy) || W(q.hw, x - 1, wy)); }
+  const wx = dx > 0 ? x : x - 1; return !(W(q.vw, wx, y) || W(q.vw, wx, y - 1));
+}
+function qMoves(q, c) {
+  const p = q.pos[c], x = p % 9, y = (p - x) / 9, occ = i => q.pos.indexOf(i) > 0, out = [];
+  for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+    if (!qOpen(q, x, y, dx, dy)) continue;
+    const ax = x + dx, ay = y + dy, a = ay * 9 + ax;
+    if (!occ(a)) { out.push(a); continue; }
+    if (qOpen(q, ax, ay, dx, dy) && !occ((ay + dy) * 9 + ax + dx)) { out.push((ay + dy) * 9 + ax + dx); continue; }
+    for (const [ex, ey] of dx ? [[0,1],[0,-1]] : [[1,0],[-1,0]]) {
+      if (qOpen(q, ax, ay, ex, ey) && !occ((ay + ey) * 9 + ax + ex)) out.push((ay + ey) * 9 + ax + ex);
+    }
+  }
+  return out;
+}
+function qGoal(np, c, i) {
+  const x = i % 9, y = (i - x) / 9, g = (np === 2 ? ['', 'y0', 'y8'] : ['', 'y0', 'x8', 'y8', 'x0'])[c];
+  return g === 'y0' ? y === 0 : g === 'y8' ? y === 8 : g === 'x8' ? x === 8 : x === 0;
+}
+function qPath(q, np, c) {
+  const seen = new Array(81).fill(0), st = [q.pos[c]]; seen[q.pos[c]] = 1;
+  while (st.length) {
+    const p = st.pop(); if (qGoal(np, c, p)) return true;
+    const x = p % 9, y = (p - x) / 9;
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) if (qOpen(q, x, y, dx, dy)) { const n = (y + dy) * 9 + x + dx; if (!seen[n]) { seen[n] = 1; st.push(n); } }
+  }
+  return false;
+}
+function qWallOk(q, np, o, a) {
+  const wx = a % 8, wy = (a - wx) / 8, A = o === 'h' ? q.hw : q.vw, B = o === 'h' ? q.vw : q.hw;
+  if (A[a] || B[a]) return false;
+  if (o === 'h') { if ((wx > 0 && A[a - 1]) || (wx < 7 && A[a + 1])) return false; }
+  else if ((wy > 0 && A[a - 8]) || (wy < 7 && A[a + 8])) return false;
+  A[a] = 1; let ok = true;
+  for (let c = 1; c <= np; c++) if (!qPath(q, np, c)) ok = false;
+  A[a] = 0;
+  return ok;
+}
+function qApply(s, i, c) {
+  const q = s.q, np = s.np;
+  if (!q || !Number.isInteger(i) || i < 0) return false;
+  if (i < 81) {
+    if (!qMoves(q, c).includes(i)) return false;
+    q.pos[c] = i; s.last = i; s.lastWall = '';
+    if (qGoal(np, c, i)) { finish(s, c, 'goal'); return true; }
+  } else {
+    const o = i < 200 ? 'h' : 'v', a = i - (o === 'h' ? 100 : 200);
+    if (a < 0 || a > 63 || q.walls[c] <= 0 || !qWallOk(q, np, o, a)) return false;
+    (o === 'h' ? q.hw : q.vw)[a] = c; q.walls[c]--; s.lastWall = o + a; s.last = -1;
+  }
+  let t = c % np + 1;
+  for (let k = 0; k < np && !q.walls[t] && !qMoves(q, t).length; k++) t = t % np + 1;
+  s.turn = t;
+  return true;
+}
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
 function applyMove(s, i, c) {
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
+  if (s.game === 'quoridor') return qApply(s, i, c);
   if (!Number.isInteger(i) || i < 0 || i >= s.board.length || s.board[i]) return false;
   const n = GAMES[s.game].size, x = i % n, y = Math.floor(i / n);
   if (s.game === 'connect4') {
@@ -259,17 +358,20 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1 };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1 };
+const CN = ['', 'CYAN', 'MAGENTA', 'LIME', 'ORANGE'];
+const NP = () => (S && S.np) || 2;
 let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
 
 // ---------- state helpers ----------
 const memberOf = role => S.members.find(m => m.role === role);
-const colorOf = cid => { const m = S.members.find(m => m.cid === cid); return m ? (m.role === 'p1' ? 1 : m.role === 'p2' ? 2 : 0) : 0; };
-const nameOf = c => { const m = memberOf(c === 1 ? 'p1' : 'p2'); return m ? m.name : '???'; };
+const colorOf = cid => { const m = S.members.find(m => m.cid === cid); return m && /^p[1-4]$/.test(m.role) ? Number(m.role[1]) : 0; };
+const nameOf = c => { const m = memberOf('p' + c); return m ? m.name : '???'; };
+const allSet = () => { for (let k = 1; k <= NP(); k++) if (!memberOf('p' + k)) return false; return true; };
 
 // ---------- host ----------
 function hostInit() {
-  S = { phase: 'lobby', game: 'reversi', members: [{ cid: me.cid, name: me.name, role: 'p1', online: true, host: true }],
+  S = { phase: 'lobby', game: 'reversi', np: 2, members: [{ cid: me.cid, name: me.name, role: 'p1', online: true, host: true }],
         board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
 }
 function broadcast() {
@@ -287,9 +389,15 @@ function act(msg) {
   else if (net && net.up) net.up(msg);
 }
 function startGame() {
-  if (!memberOf('p1') || !memberOf('p2')) return;
-  Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0 });
+  if (!allSet()) return;
+  S.np = NP();
+  Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, lastWall: '' });
   broadcast();
+}
+function setNp(n) {
+  S.np = n;
+  S.members.forEach(m => { if (colorOf(m.cid) > n) m.role = 'spec'; });
 }
 function setRole(cid, role) {
   if (S.phase !== 'lobby') return;
@@ -411,10 +519,41 @@ function entryHTML() {
   </div>`;
 }
 function slotHTML(role) {
-  const m = memberOf(role), c = role === 'p1' ? 1 : 2;
-  return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${c === 1 ? 'CYAN / 先手' : 'MAGENTA / 後手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
+  const m = memberOf(role), c = Number(role[1]);
+  return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
+}
+function qBoardHTML() {
+  const q = S.q, np = S.np, my = colorOf(me.cid), C = 100 / 11, G = C / 4, P = C + G, f = v => v.toFixed(3) + '%';
+  const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
+  const mv = new Set(myTurn && ui.qmode === 'move' ? qMoves(q, my) : []);
+  const sides = np === 2 ? ['', 'top', 'bottom'] : ['', 'top', 'right', 'bottom', 'left'];
+  let h = '<div class="qboard">';
+  for (let c = 1; c <= np; c++) h += `<i class="qgoal ${sides[c]} c${c}"></i>`;
+  for (let i = 0; i < 81; i++) {
+    const x = i % 9, y = (i - x) / 9, c = q.pos.indexOf(i);
+    h += `<button class="qcell${mv.has(i) ? ' hint' : ''}${i === S.last ? ' last' : ''}" style="left:${f(x * P)};top:${f(y * P)}" data-act="move" data-i="${i}" ${mv.has(i) ? '' : 'disabled'} aria-label="${x + 1},${y + 1}">${c > 0 ? `<i class="stone s${c}"></i>` : ''}</button>`;
+  }
+  const wall = (o, a, cls) => {
+    const wx = a % 8, wy = (a - wx) / 8;
+    return o === 'h'
+      ? `<i class="qwall ${cls}" style="left:${f(wx * P)};top:${f(wy * P + C)};width:${f(2 * C + G)};height:${f(G)}"></i>`
+      : `<i class="qwall ${cls}" style="left:${f(wx * P + C)};top:${f(wy * P)};width:${f(G)};height:${f(2 * C + G)}"></i>`;
+  };
+  for (let a = 0; a < 64; a++) {
+    if (q.hw[a]) h += wall('h', a, 'w' + q.hw[a] + (S.lastWall === 'h' + a ? ' new' : ''));
+    if (q.vw[a]) h += wall('v', a, 'w' + q.vw[a] + (S.lastWall === 'v' + a ? ' new' : ''));
+  }
+  if (myTurn && ui.qmode === 'wall') {
+    for (let a = 0; a < 64; a++) {
+      const wx = a % 8, wy = (a - wx) / 8;
+      h += `<button class="qanchor" style="left:${f(wx * P + C / 2)};top:${f(wy * P + C / 2)}" data-act="qa" data-a="${a}" aria-label="壁 ${wx + 1},${wy + 1}"></button>`;
+    }
+    if (ui.qa >= 0) h += wall(ui.qo, ui.qa, 'ghost ' + (qWallOk(q, np, ui.qo, ui.qa) ? 'ok' : 'ng'));
+  }
+  return h + '</div>';
 }
 function boardHTML() {
+  if (S.game === 'quoridor') return qBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
   const land = S.game === 'connect4' ? drops(S.board) : null;
@@ -435,31 +574,35 @@ function boardHTML() {
 function msgHTML() {
   const my = colorOf(me.cid);
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', four: '4つ並びました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
-  const g = S.game === 'gomoku' && my && S.turn === my ? '<small>マスをタップで選択 → 「ここに置く」で確定（矢印で微調整できます）</small>' : '';
+  const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定（矢印で微調整できます）</small>'
+    : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
+    : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
   return `<div class="msg">${t}${p}${g}</div>`;
 }
 function mainHTML() {
   const host = me.isHost, my = colorOf(me.cid);
   if (S.phase === 'lobby') {
-    const ready = memberOf('p1') && memberOf('p2');
+    const ready = allSet(), modes = GAMES[S.game].modes;
     return `<section class="panel">
       <h2>01 // SELECT GAME</h2>
       <div class="games">${Object.entries(GAMES).map(([k, v]) =>
         `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name}</b><small>${v.desc}</small></button>`).join('')}</div>
+      ${modes ? `<div class="modes">${modes.map(n => `<button class="${NP() === n ? 'on' : ''}" data-act="np" data-n="${n}" ${host ? '' : 'disabled'}>${n}人で対戦</button>`).join('')}</div>` : ''}
       <h2>02 // MATCH UP</h2>
-      <p class="note">${host ? 'メンバー一覧で対戦する2人を選んでください。それ以外の人は観戦になります。' : 'ホストがゲームと対戦者を選んでいます…'}</p>
-      <div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>
+      <p class="note">${host ? `メンバー一覧で対戦する${NP()}人を選んでください。それ以外の人は観戦になります。` : 'ホストがゲームと対戦者を選んでいます…'}</p>
+      ${NP() === 2 ? `<div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>`
+                   : `<div class="vs four">${[1, 2, 3, 4].map(k => slotHTML('p' + k)).join('')}</div>`}
       ${host ? `<button class="btn primary big" data-act="start" ${ready ? '' : 'disabled'}>GAME START</button>` : ''}
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : ''}</div>`;
+  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -473,27 +616,38 @@ function mainHTML() {
         <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
       </div>`;
     }
-    if (my) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
+    if (S.game === 'quoridor' && my && S.turn === my && !ui.offline) {
+      const left = S.q.walls[my];
+      if (!left) ui.qmode = 'move';
+      const wm = ui.qmode === 'wall', ok = wm && ui.qa >= 0 && qWallOk(S.q, S.np, ui.qo, ui.qa);
+      pad = `<div class="pad">
+        <button class="wide ${wm ? '' : 'on'}" data-act="qmode" data-m="move">コマを動かす</button>
+        <button class="wide ${wm ? 'on' : ''}" data-act="qmode" data-m="wall" ${left ? '' : 'disabled'}>壁を置く（残り${left}）</button>
+      </div>` + (wm ? `<div class="pad">
+        <button class="wide" data-act="qrot">向き：${ui.qo === 'h' ? '横' : '縦'}（切替）</button>
+        <button class="put" data-act="qput" ${ok ? '' : 'disabled'}>${ui.qa >= 0 && !ok ? 'ここには置けません' : 'ここに置く'}</button>
+      </div>` : '');
+    }
+    if (my && NP() === 2) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
     if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択へ</button>`;
   } else if (host) {
     btn += `<button class="btn sm primary" data-act="lobby">次のゲームを選ぶ</button>
             <button class="btn sm" data-act="start">同じ組み合わせで再戦</button>
-            <button class="btn sm mg" data-act="swap">先手後手を入れ替えて再戦</button>`;
+            <button class="btn sm mg" data-act="swap">${NP() === 2 ? '先手後手を入れ替えて再戦' : '順番をずらして再戦'}</button>`;
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
-    <div class="score">${pl(1)}${pl(2)}</div>${msgHTML()}${boardHTML()}${pad}
+    <div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>${msgHTML()}${boardHTML()}${pad}
     <div class="actions">${btn}</div>
   </section>`;
 }
 function sideHTML() {
   const host = me.isHost, lobby = S.phase === 'lobby';
   const items = S.members.map(m => {
-    const c = m.role === 'p1' ? 1 : m.role === 'p2' ? 2 : 0;
-    const badge = c ? `<b class="badge c${c}">${c === 1 ? 'CYAN' : 'MAGENTA'}</b>` : `<b class="badge spec">観戦</b>`;
+    const c = colorOf(m.cid);
+    const badge = c ? `<b class="badge c${c}">${CN[c]}</b>` : `<b class="badge spec">観戦</b>`;
     const ctl = host && lobby ? `<div class="roles">
-        <button class="r1 ${c === 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p1">先手</button>
-        <button class="r2 ${c === 2 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p2">後手</button>
+        ${Array.from({ length: NP() }, (_, k) => `<button class="r${k + 1} ${c === k + 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p${k + 1}">${NP() === 2 ? (k ? '後手' : '先手') : 'P' + (k + 1)}</button>`).join('')}
         <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
         ${!m.online ? `<button class="x" data-act="kick" data-cid="${esc(m.cid)}" title="削除">×</button>` : ''}
       </div>` : '';
@@ -537,6 +691,10 @@ document.addEventListener('click', e => {
     if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
     else { ui.sel = -1; act({ t: 'move', i }); }
   }
+  else if (a === 'qmode') { ui.qmode = el.dataset.m; ui.qa = -1; render(); }
+  else if (a === 'qa') { ui.qa = Number(el.dataset.a); render(); }
+  else if (a === 'qrot') { ui.qo = ui.qo === 'h' ? 'v' : 'h'; render(); }
+  else if (a === 'qput') { const i = (ui.qo === 'h' ? 100 : 200) + ui.qa; if (ui.qa >= 0) { ui.qa = -1; act({ t: 'move', i }); } }
   else if (a === 'put') { const i = ui.sel; ui.sel = -1; if (i >= 0) act({ t: 'move', i }); }
   else if (a === 'nudge') {
     const n = 15, d = Number(el.dataset.d), s = ui.sel < 0 ? 112 : ui.sel;
@@ -546,11 +704,12 @@ document.addEventListener('click', e => {
   }
   else if (a === 'resign') { if (confirm('投了しますか？')) act({ t: 'resign' }); }
   else if (!host || !S) return;
-  else if (a === 'game') { if (S.phase === 'lobby') { S.game = el.dataset.g; broadcast(); } }
+  else if (a === 'game') { if (S.phase === 'lobby' && GAMES[el.dataset.g]) { S.game = el.dataset.g; setNp(GAMES[S.game].modes && S.np === 4 ? 4 : 2); broadcast(); } }
+  else if (a === 'np') { const n = Number(el.dataset.n); if (S.phase === 'lobby' && (GAMES[S.game].modes || []).includes(n)) { setNp(n); broadcast(); } }
   else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
   else if (a === 'kick') { S.members = S.members.filter(m => m.cid !== el.dataset.cid || m.online); broadcast(); }
   else if (a === 'start') startGame();
-  else if (a === 'swap') { const a1 = memberOf('p1'), a2 = memberOf('p2'); if (a1 && a2) { a1.role = 'p2'; a2.role = 'p1'; startGame(); } }
+  else if (a === 'swap') { if (allSet()) { const n = NP(); S.members.forEach(m => { const k = colorOf(m.cid); if (k) m.role = 'p' + (k % n + 1); }); startGame(); } }
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
 });
 document.addEventListener('keydown', e => {
