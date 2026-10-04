@@ -142,7 +142,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 </head>
 <body>
 <div id="app"></div>
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@4.3.7/dist/mqtt.min.js"></script>
 <script>
 //<LOGIC>
 const GAMES = {
@@ -204,7 +204,9 @@ function applyMove(s, i, c) {
 }
 //</LOGIC>
 
-const PREFIX = 'cyberboard-v1-';
+const BROKERS = ['wss://broker.emqx.io:8084/mqtt', 'wss://broker.hivemq.com:8884/mqtt', 'wss://test.mosquitto.org:8081/mqtt'];
+const TOPIC = 'cyberboard-v1/';
+const CODE_RE = /^[A-Z0-9]{5}[1-3]$/;
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = {
@@ -217,7 +219,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
 const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false };
-let S = null, peer = null, hostConn = null, conns = {}, joinTimer = 0, retryTimer = 0, rehost = false;
+let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
 
 // ---------- state helpers ----------
 const memberOf = role => S.members.find(m => m.role === role);
@@ -230,7 +232,9 @@ function hostInit() {
         board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
 }
 function broadcast() {
-  for (const c of Object.values(conns)) if (c.open) { try { c.send({ t: 'state', s: S }); } catch (e) {} }
+  const j = JSON.stringify({ t: 'state', s: S });
+  if (net && net.connected) net.publish(TOPIC + me.code + '/state', j, { retain: true, qos: 1 });
+  store.set('cb_state', JSON.stringify(S), true);
   render();
 }
 function handle(cid, msg) {
@@ -239,7 +243,7 @@ function handle(cid, msg) {
 }
 function act(msg) {
   if (me.isHost) handle(me.cid, msg);
-  else if (hostConn && hostConn.open) hostConn.send(msg);
+  else if (net && net.up) net.up(msg);
 }
 function startGame() {
   if (!memberOf('p1') || !memberOf('p2')) return;
@@ -252,94 +256,101 @@ function setRole(cid, role) {
   if (role !== 'spec') { const cur = memberOf(role); if (cur && cur !== m) cur.role = 'spec'; }
   m.role = role; broadcast();
 }
-function onConn(conn) {
-  let cid = null;
-  conn.on('data', msg => {
-    if (!msg || typeof msg !== 'object' || !S) return;
-    if (msg.t === 'hello') {
-      cid = String(msg.cid || '').slice(0, 40); if (!cid || cid === me.cid) { cid = null; return; }
-      const name = String(msg.name || 'GUEST').slice(0, 12);
-      if (conns[cid] && conns[cid] !== conn) { try { conns[cid].close(); } catch (e) {} }
-      conns[cid] = conn;
-      const m = S.members.find(m => m.cid === cid);
-      if (m) { m.online = true; m.name = name; } else S.members.push({ cid, name, role: 'spec', online: true });
-      broadcast();
-    } else if (cid && conns[cid] === conn) handle(cid, msg);
-  });
-  conn.on('close', () => {
-    if (!cid || conns[cid] !== conn || !S) return;
-    delete conns[cid];
-    const m = S.members.find(m => m.cid === cid);
-    if (m) { if (m.role === 'spec') S.members = S.members.filter(x => x !== m); else m.online = false; }
-    broadcast();
-  });
+function drop(cid) {
+  const m = S.members.find(x => x.cid === cid); if (!m || m.host) return;
+  delete seen[cid];
+  if (m.role === 'spec') S.members = S.members.filter(x => x !== m); else m.online = false;
+  broadcast();
 }
-function createRoom(tries) {
-  tries = tries || 0;
-  me.isHost = true; if (!me.code) me.code = rnd(5);
+function sweep() {
+  if (!S) return;
+  const now = Date.now();
+  S.members.filter(m => !m.host && m.online && now - (seen[m.cid] || 0) > 16000).forEach(m => drop(m.cid));
+}
+function onUp(m) {
+  if (!m || typeof m !== 'object' || !S) return;
+  const cid = String(m.cid || '').slice(0, 40); if (!cid || cid === me.cid) return;
+  if (m.t === 'hello' || m.t === 'ping') {
+    seen[cid] = Date.now();
+    const name = String(m.name || 'GUEST').slice(0, 12);
+    const mem = S.members.find(x => x.cid === cid);
+    if (!mem) { S.members.push({ cid, name, role: 'spec', online: true }); broadcast(); }
+    else if (!mem.online || mem.name !== name || m.t === 'hello') { mem.online = true; mem.name = name; broadcast(); }
+  }
+  else if (m.t === 'bye') drop(cid);
+  else if (S.members.some(x => x.cid === cid)) handle(cid, m);
+}
+function createRoom(bi) {
+  bi = bi || 0;
+  me.isHost = true;
+  if (!rehost) me.code = rnd(5) + (bi + 1);
   ui.screen = 'connecting'; ui.status = 'CREATING ROOM...'; render();
-  peer = new Peer(PREFIX + me.code);
-  peer.on('open', () => {
-    if (!S) hostInit();
-    store.set('cb_host', me.code, true);
-    history.replaceState(null, '', '?room=' + me.code);
-    ui.screen = 'room'; ui.offline = false; render();
+  const base = TOPIC + me.code;
+  const c = net = mqtt.connect(BROKERS[Number(me.code[5]) - 1], { connectTimeout: 8000, reconnectPeriod: 3000, keepalive: 20,
+    will: { topic: base + '/state', payload: JSON.stringify({ t: 'closed' }), retain: true, qos: 1 } });
+  let opened = false;
+  const to = setTimeout(() => {
+    if (opened || net !== c) return;
+    c.end(true);
+    if (!rehost && bi + 1 < BROKERS.length) createRoom(bi + 1);
+    else fail('接続サーバーに繋がりませんでした。時間をおいて試してください。');
+  }, 9000);
+  c.on('connect', () => {
+    if (net !== c) return;
+    clearTimeout(to);
+    c.subscribe(base + '/up', { qos: 1 });
+    if (!opened) {
+      opened = true;
+      if (rehost) { try { S = JSON.parse(store.get('cb_state', true)); } catch (e) { S = null; } }
+      if (!S || !S.members) hostInit();
+      S.members.forEach(m => { seen[m.cid] = Date.now(); });
+      store.set('cb_host', me.code, true);
+      history.replaceState(null, '', '?room=' + me.code);
+      ui.screen = 'room';
+      sweepTimer = setInterval(sweep, 5000);
+    }
+    ui.offline = false; broadcast();
   });
-  peer.on('connection', onConn);
-  peer.on('disconnected', () => { if (peer && !peer.destroyed) { ui.offline = true; render(); setTimeout(() => { if (peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 2000); } });
-  peer.on('error', e => {
-    if (S) return;
-    if (e.type === 'unavailable-id') {
-      peer.destroy();
-      if (rehost && tries < 6) setTimeout(() => createRoom(tries + 1), 2500);
-      else if (!rehost) { me.code = rnd(5); createRoom(); }
-      else fail('ルームを復元できませんでした。新しく作り直してください。');
-    } else fail('接続サーバーに繋がりませんでした（' + e.type + '）');
-  });
+  c.on('message', (tp, buf) => { let m; try { m = JSON.parse(buf.toString()); } catch (e) { return; } onUp(m); });
+  c.on('close', () => { if (opened && net === c) { ui.offline = true; render(); } });
+  c.on('error', () => {});
 }
 
 // ---------- guest ----------
 function joinRoom() {
-  me.isHost = false;
+  me.isHost = false; gotState = false;
   ui.screen = 'connecting'; ui.status = 'CONNECTING...'; render();
-  peer = new Peer();
-  peer.on('open', connectHost);
-  peer.on('disconnected', () => { setTimeout(() => { if (peer && !peer.destroyed && peer.disconnected) peer.reconnect(); }, 2000); });
-  peer.on('error', e => {
-    if (e.type === 'peer-unavailable') { if (S) schedRetry(); else fail('ルームが見つかりません。コードを確認してください。'); }
-    else if (!S) fail('接続できませんでした（' + e.type + '）');
-  });
-}
-function connectHost() {
-  clearTimeout(joinTimer);
-  if (!peer || peer.destroyed) return;
-  const c = hostConn = peer.connect(PREFIX + me.code, { reliable: true, serialization: 'json' });
+  const base = TOPIC + me.code;
+  const c = net = mqtt.connect(BROKERS[Number(me.code[5]) - 1], { connectTimeout: 8000, reconnectPeriod: 3000, keepalive: 20 });
+  const up = c.up = m => { if (c.connected) c.publish(base + '/up', JSON.stringify(Object.assign({ cid: me.cid, name: me.name }, m)), { qos: 1 }); };
   joinTimer = setTimeout(() => {
-    if (c.open) return;
-    if (S) schedRetry();
-    else fail('ホストに接続できませんでした。ネットワーク環境（モバイル回線・学校や会社のLANなど）が原因の可能性があります。');
-  }, 15000);
-  c.on('open', () => { clearTimeout(joinTimer); c.send({ t: 'hello', cid: me.cid, name: me.name }); });
-  c.on('data', m => {
-    if (!m || m.t !== 'state') return;
-    S = m.s; ui.screen = 'room'; ui.offline = false;
+    if (gotState || net !== c) return;
+    fail(c.connected ? 'ルームが見つかりません。コードが正しいか、ホストがルームを開いたままにしているか確認してください。'
+                     : '接続サーバーに繋がりませんでした。時間をおいて試してください。');
+  }, 10000);
+  pingTimer = setInterval(() => up({ t: 'ping' }), 5000);
+  c.on('connect', () => { if (net === c) c.subscribe(base + '/state', { qos: 1 }, () => up({ t: 'hello' })); });
+  c.on('message', (tp, buf) => {
+    if (net !== c) return;
+    let m; try { m = JSON.parse(buf.toString()); } catch (e) { return; }
+    if (m.t === 'closed') { if (gotState) { ui.offline = true; render(); } return; }
+    if (m.t !== 'state' || !m.s || !Array.isArray(m.s.members)) return;
+    if (!m.s.members.some(x => x.cid === me.cid)) { if (gotState) up({ t: 'hello' }); return; }
+    S = m.s; gotState = true; ui.screen = 'room'; ui.offline = false;
+    store.set('cb_guest', me.code, true);
     history.replaceState(null, '', '?room=' + me.code); render();
   });
-  c.on('close', () => { if (hostConn === c && S) { ui.offline = true; render(); schedRetry(); } });
-}
-function schedRetry() {
-  clearTimeout(retryTimer);
-  retryTimer = setTimeout(() => {
-    if (!peer || peer.destroyed) return;
-    if (peer.disconnected) { peer.reconnect(); schedRetry(); } else connectHost();
-  }, 3000);
+  c.on('close', () => { if (gotState && net === c) { ui.offline = true; render(); } });
+  c.on('error', () => {});
 }
 function fail(msg) {
-  clearTimeout(joinTimer); clearTimeout(retryTimer);
-  try { if (peer) peer.destroy(); } catch (e) {}
-  peer = null; hostConn = null; conns = {}; S = null; rehost = false; store.del('cb_host');
-  ui.screen = 'entry'; ui.error = msg; render();
+  clearTimeout(joinTimer); clearInterval(pingTimer); clearInterval(sweepTimer);
+  try { if (net) net.end(true); } catch (e) {}
+  net = null; S = null; seen = {}; rehost = false; gotState = false;
+  store.del('cb_host'); store.del('cb_guest'); store.del('cb_state');
+  ui.screen = 'entry'; ui.offline = false; ui.error = msg; render();
 }
+window.addEventListener('pagehide', () => { if (net && net.up && gotState) net.up({ t: 'bye' }); });
 
 // ---------- views ----------
 function entryHTML() {
@@ -352,7 +363,7 @@ function entryHTML() {
       <button class="btn primary" data-act="create">ルームを作る（ホスト）</button>
       <div class="or">— OR —</div>
       <label for="code">ROOM CODE</label>
-      <input id="code" maxlength="5" placeholder="XXXXX" value="${esc(me.code)}" autocomplete="off">
+      <input id="code" maxlength="6" placeholder="XXXXXX" value="${esc(me.code)}" autocomplete="off">
       <button class="btn mg" data-act="join">ルームに参加する</button>
       <p class="err">${esc(ui.error)}</p>
     </div>
@@ -451,15 +462,15 @@ function render() {
 // ---------- events ----------
 function readEntry() {
   me.name = ($('#name').value || '').trim().slice(0, 12);
-  me.code = ($('#code').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  me.code = ($('#code').value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   if (!me.name) { ui.error = '名前を入力してください。'; render(); return false; }
   store.set('cb_name', me.name); ui.error = ''; return true;
 }
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
   const a = el.dataset.act, host = me.isHost;
-  if (a === 'create') { if (readEntry()) { me.code = ''; rehost = false; createRoom(); } }
-  else if (a === 'join') { if (readEntry()) { if (me.code.length !== 5) { ui.error = 'ルームコード（5文字）を入力してください。'; render(); } else joinRoom(); } }
+  if (a === 'create') { if (readEntry()) { rehost = false; S = null; createRoom(0); } }
+  else if (a === 'join') { if (readEntry()) { if (!CODE_RE.test(me.code)) { ui.error = 'ルームコード（6文字）を正しく入力してください。'; render(); } else joinRoom(); } }
   else if (a === 'copy') {
     const url = location.origin + location.pathname + '?room=' + me.code;
     const done = () => { ui.copied = true; render(); setTimeout(() => { ui.copied = false; if (S) render(); }, 1500); };
@@ -483,10 +494,11 @@ document.addEventListener('keydown', e => {
 
 // ---------- boot ----------
 (function boot() {
-  const q = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+  const q = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
   me.code = q;
-  if (typeof Peer === 'undefined') { ui.error = '通信ライブラリを読み込めませんでした。ネット接続を確認して再読み込みしてください。'; render(); return; }
-  if (q && me.name && store.get('cb_host', true) === q) { rehost = true; createRoom(); return; }
+  if (typeof mqtt === 'undefined') { ui.error = '通信ライブラリを読み込めませんでした。ネット接続を確認して再読み込みしてください。'; render(); return; }
+  if (CODE_RE.test(q) && me.name && store.get('cb_host', true) === q) { rehost = true; createRoom(); return; }
+  if (CODE_RE.test(q) && me.name && store.get('cb_guest', true) === q) { joinRoom(); return; }
   render();
 })();
 </script>
