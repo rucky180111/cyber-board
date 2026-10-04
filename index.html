@@ -134,6 +134,24 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .s2{background:radial-gradient(circle at 35% 30%,#ffe0f8,#ff2bd6 45%,#5d0a4c);box-shadow:0 0 10px var(--mg)}
 .s3{background:radial-gradient(circle at 35% 30%,#f1ffe0,#8dff3a 45%,#2b5d0a);box-shadow:0 0 10px var(--p3)}
 .s4{background:radial-gradient(circle at 35% 30%,#fff1dc,#ff9d2e 45%,#6b3a05);box-shadow:0 0 10px var(--p4)}
+.gboard{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:min(100%,420px);aspect-ratio:1;margin:12px auto}
+.gcell{position:relative;background:#03060f;border:1px solid rgba(0,240,255,.3);padding:0;margin:0;cursor:pointer;touch-action:manipulation;box-shadow:inset 0 0 20px rgba(0,240,255,.06)}
+.gcell:disabled{cursor:default}
+.gcell.hint{border-color:var(--yl);background:rgba(246,255,0,.13)}
+.gcell.sel{border-color:#fff;box-shadow:0 0 14px #fff}
+.gcell.last .gp{outline:2px solid var(--yl);outline-offset:2px}
+.gcell.win .gp{animation:pulse .8s infinite alternate}
+.gp{border-radius:50%;display:block}
+.gcell .gp{position:absolute}
+.gcell .z1{inset:34%}
+.gcell .z2{inset:21%}
+.gcell .z3{inset:7%}
+.pad.ghand button{flex:1;min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--tx)}
+.pad.ghand button.on{border-color:#fff;box-shadow:0 0 14px #fff}
+.ghand .z1{width:14px;height:14px}
+.ghand .z2{width:24px;height:24px}
+.ghand .z3{width:36px;height:36px}
+.pl b.gh{font-family:inherit;font-size:11px;white-space:nowrap}
 .qboard{position:relative;width:min(100%,540px);aspect-ratio:1;margin:12px auto}
 .qcell{position:absolute;width:9.091%;height:9.091%;border:1px solid rgba(0,240,255,.22);background:#03060f;padding:0;margin:0;cursor:pointer;touch-action:manipulation}
 .qcell:disabled{cursor:default}
@@ -197,7 +215,8 @@ const GAMES = {
   reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
   gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' },
   connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' },
-  quoridor: { name: 'コリドール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' }
+  quoridor: { name: 'コリドール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' },
+  gobblet: { name: '被せ3目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
@@ -245,6 +264,36 @@ function drops(b) {
   const r = [];
   for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
   return r;
+}
+const GL = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+function gInit() { return { st: Array.from({ length: 9 }, () => []), hand: [null, [2, 2, 2], [2, 2, 2]], hist: {} }; }
+function gTop(st) { return st.length ? st[st.length - 1] : 0; }
+function gCan(g, size, to) { const t = gTop(g.st[to]); return !t || t % 10 < size; }
+function gLine(g, c) { for (const l of GL) if (l.every(i => Math.floor(gTop(g.st[i]) / 10) === c)) return l; return null; }
+function gApply(s, i, c) {
+  const g = s.g;
+  if (!g || !Number.isInteger(i)) return false;
+  if (i >= 1000 && i < 1040) {
+    const size = Math.floor((i - 1000) / 10), to = (i - 1000) % 10;
+    if (size < 1 || size > 3 || to > 8 || g.hand[c][size - 1] <= 0 || !gCan(g, size, to)) return false;
+    g.hand[c][size - 1]--; g.st[to].push(c * 10 + size); s.last = to;
+  } else if (i >= 2000 && i < 2090) {
+    const from = Math.floor((i - 2000) / 10), to = (i - 2000) % 10;
+    if (from > 8 || to > 8 || from === to) return false;
+    const p = gTop(g.st[from]);
+    if (Math.floor(p / 10) !== c || !gCan(g, p % 10, to)) return false;
+    g.st[from].pop(); g.st[to].push(p); s.last = to;
+  } else return false;
+  const o = 3 - c, lo = gLine(g, o), lc = gLine(g, c);
+  if (lo) { s.line = lo; finish(s, o, 'reveal'); }
+  else if (lc) { s.line = lc; finish(s, c, 'three'); }
+  else {
+    s.turn = o;
+    const k = g.st.map(x => x.join('.')).join('|') + '/' + o;
+    g.hist[k] = (g.hist[k] || 0) + 1;
+    if (g.hist[k] >= 3) finish(s, 0, 'rep');
+  }
+  return true;
 }
 function qInit(np) {
   return { pos: np === 2 ? [-1, 76, 4] : [-1, 76, 36, 4, 44], walls: np === 2 ? [0, 10, 10] : [0, 5, 5, 5, 5],
@@ -314,6 +363,7 @@ function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.tu
 function applyMove(s, i, c) {
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
+  if (s.game === 'gobblet') return gApply(s, i, c);
   if (!Number.isInteger(i) || i < 0 || i >= s.board.length || s.board[i]) return false;
   const n = GAMES[s.game].size, x = i % n, y = Math.floor(i / n);
   if (s.game === 'connect4') {
@@ -358,7 +408,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1 };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null };
 const CN = ['', 'CYAN', 'MAGENTA', 'LIME', 'ORANGE'];
 const NP = () => (S && S.np) || 2;
 let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
@@ -392,7 +442,7 @@ function startGame() {
   if (!allSet()) return;
   S.np = NP();
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, lastWall: '' });
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, lastWall: '' });
   broadcast();
 }
 function setNp(n) {
@@ -522,6 +572,22 @@ function slotHTML(role) {
   const m = memberOf(role), c = Number(role[1]);
   return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
+function gBoardHTML() {
+  const g = S.g, my = colorOf(me.cid), myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
+  if (ui.gs && (!my || (ui.gs.k === 'b' ? Math.floor(gTop(g.st[ui.gs.from]) / 10) !== my : !g.hand[my][ui.gs.size - 1]))) ui.gs = null;
+  const sel = myTurn ? ui.gs : null, size = !sel ? 0 : sel.k === 'h' ? sel.size : gTop(g.st[sel.from]) % 10;
+  let h = '<div class="gboard">';
+  for (let i = 0; i < 9; i++) {
+    const t = gTop(g.st[i]), own = myTurn && Math.floor(t / 10) === my, from = sel && sel.k === 'b' && sel.from === i;
+    const tgt = sel && !from && gCan(g, size, i), cls = ['gcell'];
+    if (tgt) cls.push('hint');
+    if (from) cls.push('sel');
+    if (i === S.last) cls.push('last');
+    if (S.line && S.line.includes(i)) cls.push('win');
+    h += `<button class="${cls.join(' ')}" data-act="gcell" data-i="${i}" ${tgt || own ? '' : 'disabled'} aria-label="${i % 3 + 1},${Math.floor(i / 3) + 1}">${t ? `<i class="gp z${t % 10} s${Math.floor(t / 10)}"></i>` : ''}</button>`;
+  }
+  return h + '</div>';
+}
 function qBoardHTML() {
   const q = S.q, np = S.np, my = colorOf(me.cid), C = 100 / 11, G = C / 4, P = C + G, f = v => v.toFixed(3) + '%';
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
@@ -554,6 +620,7 @@ function qBoardHTML() {
 }
 function boardHTML() {
   if (S.game === 'quoridor') return qBoardHTML();
+  if (S.game === 'gobblet') return gBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
   const land = S.game === 'connect4' ? drops(S.board) : null;
@@ -574,13 +641,14 @@ function boardHTML() {
 function msgHTML() {
   const my = colorOf(me.cid);
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定（矢印で微調整できます）</small>'
+    : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
   return `<div class="msg">${t}${p}${g}</div>`;
@@ -602,7 +670,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : ''}</div>`;
+  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -615,6 +683,10 @@ function mainHTML() {
         <button data-act="nudge" data-d="2" aria-label="下へ">▼</button>
         <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
       </div>`;
+    }
+    if (S.game === 'gobblet' && my) {
+      const hd = S.g.hand[my], on = S.turn === my && !ui.offline;
+      pad = `<div class="pad ghand">` + [1, 2, 3].map(z => `<button class="${on && ui.gs && ui.gs.k === 'h' && ui.gs.size === z ? 'on' : ''}" data-act="ghand" data-z="${z}" ${on && hd[z - 1] ? '' : 'disabled'}><i class="gp z${z} s${my}"></i><span>${['小', '中', '大'][z - 1]} ×${hd[z - 1]}</span></button>`).join('') + `</div>`;
     }
     if (S.game === 'quoridor' && my && S.turn === my && !ui.offline) {
       const left = S.q.walls[my];
@@ -690,6 +762,13 @@ document.addEventListener('click', e => {
     const i = Number(el.dataset.i);
     if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
     else { ui.sel = -1; act({ t: 'move', i }); }
+  }
+  else if (a === 'ghand') { const z = Number(el.dataset.z); ui.gs = ui.gs && ui.gs.k === 'h' && ui.gs.size === z ? null : { k: 'h', size: z }; render(); }
+  else if (a === 'gcell') {
+    const i = Number(el.dataset.i), g = S.g, my = colorOf(me.cid), sel = ui.gs;
+    const size = !sel ? 0 : sel.k === 'h' ? sel.size : gTop(g.st[sel.from]) % 10, from = sel && sel.k === 'b' && sel.from === i;
+    if (sel && !from && gCan(g, size, i)) { ui.gs = null; act({ t: 'move', i: sel.k === 'h' ? 1000 + size * 10 + i : 2000 + sel.from * 10 + i }); }
+    else if (Math.floor(gTop(g.st[i]) / 10) === my) { ui.gs = from ? null : { k: 'b', from: i }; render(); }
   }
   else if (a === 'qmode') { ui.qmode = el.dataset.m; ui.qa = -1; render(); }
   else if (a === 'qa') { ui.qa = Number(el.dataset.a); render(); }
