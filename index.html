@@ -76,7 +76,14 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
 @media(max-width:820px){.layout{grid-template-columns:1fr}}
 
-.games{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.connect4{padding:1.5%;background:#070d24}
+.connect4 .cell::before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(0,240,255,.3);background:#02030a}
+.connect4 .stone{inset:8%;z-index:1}
+.connect4 .hint::after{content:"";position:absolute;inset:40%;border-radius:50%;background:var(--yl);opacity:.75;box-shadow:0 0 8px var(--yl);z-index:1}
+.connect4 .last .stone{animation:drop .35s ease-in}
+.connect4 .win .stone{animation:pulse .8s infinite alternate}
+@keyframes drop{from{transform:translateY(-320%);opacity:.3}}
 .game{background:#03050d;border:1px solid var(--line);color:var(--tx);padding:16px 12px;cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
 .game b{display:block;font-size:17px;margin-bottom:6px}
 .game small{color:var(--dim);font-size:12px;line-height:1.5;display:block}
@@ -155,12 +162,13 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 //<LOGIC>
 const GAMES = {
   reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
-  gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' }
+  gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' },
+  connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
-  const n = GAMES[game].size, b = new Array(n * n).fill(0);
+  const n = GAMES[game].size, b = new Array(n * (GAMES[game].rows || n)).fill(0);
   if (game === 'reversi') { b[27] = 2; b[28] = 1; b[35] = 1; b[36] = 2; }
   return b;
 }
@@ -188,11 +196,36 @@ function fiveAt(b, x, y, c) {
   }
   return null;
 }
+function lineAt(b, w, h, x, y, c, k) {
+  for (const [dx, dy] of [[1,0],[0,1],[1,1],[1,-1]]) {
+    const line = [y * w + x];
+    for (const s of [1, -1]) {
+      let cx = x + dx * s, cy = y + dy * s;
+      while (cx >= 0 && cx < w && cy >= 0 && cy < h && b[cy * w + cx] === c) { line.push(cy * w + cx); cx += dx * s; cy += dy * s; }
+    }
+    if (line.length >= k) return line;
+  }
+  return null;
+}
+function drops(b) {
+  const r = [];
+  for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
+  return r;
+}
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
 function applyMove(s, i, c) {
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (!Number.isInteger(i) || i < 0 || i >= s.board.length || s.board[i]) return false;
   const n = GAMES[s.game].size, x = i % n, y = Math.floor(i / n);
+  if (s.game === 'connect4') {
+    if (y < 5 && !s.board[i + n]) return false;
+    s.board[i] = c; s.last = i;
+    const l = lineAt(s.board, 7, 6, x, y, c, 4);
+    if (l) { s.line = l; finish(s, c, 'four'); }
+    else if (s.board.every(v => v)) finish(s, 0, 'full');
+    else s.turn = 3 - c;
+    return true;
+  }
   if (s.game === 'reversi') {
     const f = flips(s.board, x, y, c);
     if (!f.length) return false;
@@ -384,8 +417,9 @@ function slotHTML(role) {
 function boardHTML() {
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
-  const hints = new Set(myTurn && S.game === 'reversi' ? legal(S.board, my) : []);
-  let h = `<div class="board ${S.game}" style="--n:${n}">`;
+  const land = S.game === 'connect4' ? drops(S.board) : null;
+  const hints = new Set(!myTurn ? [] : land ? land.filter(i => i >= 0) : S.game === 'reversi' ? legal(S.board, my) : []);
+  let h = `<div class="board ${S.game}" style="--n:${n}${land ? ';aspect-ratio:7/6' : ''}">`;
   S.board.forEach((v, i) => {
     const cls = ['cell'];
     if (i === S.last) cls.push('last');
@@ -393,15 +427,15 @@ function boardHTML() {
     if (hints.has(i)) cls.push('hint');
     const sel = myTurn && S.game === 'gomoku' && i === ui.sel;
     if (sel) cls.push('sel');
-    const can = myTurn && !v && (S.game === 'gomoku' || hints.has(i));
-    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
+    const can = myTurn && !v && (S.game === 'gomoku' || hints.has(i) || (land && land[i % n] >= 0));
+    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${land ? land[i % n] : i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
   });
   return h + '</div>';
 }
 function msgHTML() {
   const my = colorOf(me.cid);
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', four: '4つ並びました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
