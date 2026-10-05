@@ -403,8 +403,7 @@ const GAMES = {
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。お互いに数字を決めて、ヒットとブローを手がかりに相手の数字を先に当てた方が勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' },
-  dotsq: { name: 'ドット＆スクエア', size: 7, modes: [2, 3, 4], dk: 'sq', desc: '7×7。順番にドットを打ち、4つのドットで正方形（斜めも含む）ができたら打った人の負け。気づいた人が通告して判定。2〜4人。' },
-  dotci: { name: 'ドット＆サークル', size: 8, modes: [2, 3, 4], dk: 'ci', desc: '8×8。順番にドットを打ち、4つのドットが同じ円の上に乗ったら打った人の負け。気づいた人が通告して判定。2〜4人。' }
+  dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '順番にドットを打ち、4つのドットで形ができたら打った人の負け。正方形のスクエアモードと、同じ円に乗るサークルモード。通告して判定。2〜4人。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
@@ -836,7 +835,7 @@ function startGame() {
   if (!allSet()) return;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dt: GAMES[S.game].dk ? dInit(GAMES[S.game].dk, S.np) : null, lastWall: '' });
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
   if (S.hb || S.jk || S.ca) S.turn = 0;
   broadcast();
 }
@@ -1258,7 +1257,7 @@ function msgHTML() {
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
-    : GAMES[S.game].dk ? '<small>マスを選んで「ここに打つ」。4点' + (GAMES[S.game].dk === 'sq' ? 'で正方形' : 'が同じ円の上') + 'になると、打った人の負け</small>'
+    : GAMES[S.game].dk ? '<small>マスを選んで「ここに打つ」。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1274,6 +1273,7 @@ function mainHTML() {
       <div class="games">${Object.entries(GAMES).map(([k, v]) =>
         `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name}</b><small>${v.desc}</small></button>`).join('')}</div>
       ${modes ? `<div class="modes">${modes.map(n => `<button class="${NP() === n ? 'on' : ''}" data-act="np" data-n="${n}" ${host ? '' : 'disabled'}>${n}人で対戦</button>`).join('')}</div>` : ''}
+      ${GAMES[S.game].vars ? `<div class="modes">${GAMES[S.game].vars.map(v => `<button class="${(S.dv === 'ci' ? 'ci' : 'sq') === v[0] ? 'on' : ''}" data-act="dvar" data-v="${v[0]}" ${host ? '' : 'disabled'}>${v[1]}モード</button>`).join('')}</div>` : ''}
       <h2>02 // MATCH UP</h2>
       <p class="note">${host ? `メンバー一覧で対戦する${NP()}人を選んでください。それ以外の人は観戦になります。` : 'ホストがゲームと対戦者を選んでいます…'}</p>
       ${NP() === 2 ? `<div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>`
@@ -1343,7 +1343,7 @@ function mainHTML() {
             <button class="btn sm mg" data-act="swap">${NP() === 2 ? '先手後手を入れ替えて再戦' : '順番をずらして再戦'}</button>`;
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
-    <h2>${GAMES[S.game].name.toUpperCase()} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
+    <h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
     <div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
     <div class="actions">${btn}</div>
   </section>`;
@@ -1400,7 +1400,7 @@ function fxResult() {
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
-  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : ({ dotsq: 'SQUARE', dotci: 'CIRCLE', gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
 }
 function finHTML() {
   if (!FIN()) return '';
@@ -1520,6 +1520,7 @@ document.addEventListener('click', e => {
   else if (a === 'resign') { if (confirm('投了しますか？')) act({ t: 'resign' }); }
   else if (!host || !S) return;
   else if (a === 'game') { if (S.phase === 'lobby' && GAMES[el.dataset.g]) { S.game = el.dataset.g; setNp((GAMES[S.game].modes || []).includes(S.np) ? S.np : 2); broadcast(); } }
+  else if (a === 'dvar') { if (S.phase === 'lobby') { S.dv = el.dataset.v === 'ci' ? 'ci' : 'sq'; broadcast(); } }
   else if (a === 'np') { const n = Number(el.dataset.n); if (S.phase === 'lobby' && (GAMES[S.game].modes || []).includes(n)) { setNp(n); broadcast(); } }
   else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
   else if (a === 'statreset') { if (confirm('全員の勝敗記録をリセットしますか？')) { S.stats = {}; broadcast(); } }
