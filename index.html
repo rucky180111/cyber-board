@@ -453,8 +453,8 @@ function drops(b) {
   return r;
 }
 function dInit(kind, np) {
-  const n = kind === 'ci' ? 8 : 7;
-  return { n, kind, own: new Array(n * n).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), pend: new Array(np + 1).fill(0), claim: null };
+  const n = 7, r = 8;
+  return { n, r, kind, own: new Array(n * r).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), pend: new Array(np + 1).fill(0), claim: null };
 }
 function dShape(kind, n, P) {
   const q = P.map(i => [i % n, Math.floor(i / n)]);
@@ -473,7 +473,7 @@ function dNext(d, c, np) { for (let k = 0; k < np; k++) { c = c % np + 1; if (d.
 function dApply(s, i, c) {
   const d = s.dt, np = s.np;
   if (s.phase !== 'playing' || !d || !c || !d.alive[c] || !Number.isInteger(i)) return false;
-  if (i >= 50000 && i < 50000 + d.n * d.n) {
+  if (i >= 50000 && i < 50000 + d.own.length) {
     const k = i - 50000;
     if (s.turn !== c || d.own[k] || d.pend.some(v => v)) return false;
     d.own[k] = c; d.last = k; d.by = c; d.claim = null; s.last = k;
@@ -492,7 +492,7 @@ function dApply(s, i, c) {
   if (i >= 60000000 && i < 61000000) {
     if (!d.pend[c]) return false;
     const v = i - 60000000, P = [Math.floor(v / 10000), Math.floor(v / 100) % 100, v % 100];
-    if (new Set(P).size !== 3 || P.some(k => k >= d.n * d.n || !d.own[k] || k === d.last)) return false;
+    if (new Set(P).size !== 3 || P.some(k => k >= d.own.length || !d.own[k] || k === d.last)) return false;
     const pts = [d.last].concat(P), ok = dShape(d.kind, d.n, pts);
     d.claim = { by: c, on: d.by, pts, ok };
     d.alive[ok ? d.by : c] = 0;
@@ -1020,16 +1020,16 @@ function slotHTML(role) {
   return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
 function dShapeSVG(d) {
-  const n = d.n, q = d.claim.pts.map(i => [i % n + .5, Math.floor(i / n) + .5]);
+  const n = d.n, r = d.own.length / n, q = d.claim.pts.map(i => [i % n + .5, Math.floor(i / n) + .5]);
   if (d.kind === 'sq') {
     const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
     q.sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
-    return `<svg class="dsvg" viewBox="0 0 ${n} ${n}"><polygon points="${q.map(p => p.join(',')).join(' ')}"/></svg>`;
+    return `<svg class="dsvg" viewBox="0 0 ${n} ${r}"><polygon points="${q.map(p => p.join(',')).join(' ')}"/></svg>`;
   }
   const a = q[0], b = q[1], c = q[2], D = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
   const A = a[0] * a[0] + a[1] * a[1], B = b[0] * b[0] + b[1] * b[1], C = c[0] * c[0] + c[1] * c[1];
   const ux = (A * (b[1] - c[1]) + B * (c[1] - a[1]) + C * (a[1] - b[1])) / D, uy = (A * (c[0] - b[0]) + B * (a[0] - c[0]) + C * (b[0] - a[0])) / D;
-  return `<svg class="dsvg" viewBox="0 0 ${n} ${n}"><circle cx="${ux.toFixed(3)}" cy="${uy.toFixed(3)}" r="${Math.sqrt((a[0] - ux) * (a[0] - ux) + (a[1] - uy) * (a[1] - uy)).toFixed(3)}"/></svg>`;
+  return `<svg class="dsvg" viewBox="0 0 ${n} ${r}"><circle cx="${ux.toFixed(3)}" cy="${uy.toFixed(3)}" r="${Math.sqrt((a[0] - ux) * (a[0] - ux) + (a[1] - uy) * (a[1] - uy)).toFixed(3)}"/></svg>`;
 }
 function dWait() { return !!(S.dt && S.dt.pend && S.dt.pend.some(v => v)); }
 function dBoardHTML() {
@@ -1041,8 +1041,8 @@ function dBoardHTML() {
   const cl = ui.dClaim, shown = d.claim && d.claim.ok ? d.claim.pts : [], k = d.claim;
   const rule = !k ? '' : k.ok ? `<div class="drule ok">${esc(nameOf(k.by))} の通告が成立！ ${esc(nameOf(k.on))} は失格</div>`
     : `<div class="drule ng">${esc(nameOf(k.by))} の通告は不成立… ${esc(nameOf(k.by))} は失格</div>`;
-  let h = `${rule}<div class="board dots" style="--n:${n}">`;
-  for (let i = 0; i < n * n; i++) {
+  let h = `${rule}<div class="board dots" style="--n:${n};aspect-ratio:${n}/${d.own.length / n}">`;
+  for (let i = 0; i < d.own.length; i++) {
     const v = d.own[i], cls = ['cell'];
     if (i === d.last) cls.push('last');
     if (shown.includes(i)) cls.push('win');
