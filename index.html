@@ -142,6 +142,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .gcell.last .gp{outline:2px solid var(--yl);outline-offset:2px}
 .gcell.win .gp{animation:pulse .8s infinite alternate}
 .gp{border-radius:50%;display:block}
+.gr{position:absolute;border-radius:50%;border:1px dashed rgba(215,246,255,.28);pointer-events:none}
 .gcell .gp{position:absolute}
 .gcell .z1{inset:34%}
 .gcell .z2{inset:21%}
@@ -584,7 +585,7 @@ function gBoardHTML() {
     if (from) cls.push('sel');
     if (i === S.last) cls.push('last');
     if (S.line && S.line.includes(i)) cls.push('win');
-    h += `<button class="${cls.join(' ')}" data-act="gcell" data-i="${i}" ${tgt || own ? '' : 'disabled'} aria-label="${i % 3 + 1},${Math.floor(i / 3) + 1}">${t ? `<i class="gp z${t % 10} s${Math.floor(t / 10)}"></i>` : ''}</button>`;
+    h += `<button class="${cls.join(' ')}" data-act="gcell" data-i="${i}" ${tgt || own ? '' : 'disabled'} aria-label="${i % 3 + 1},${Math.floor(i / 3) + 1}"><i class="gr z1"></i><i class="gr z2"></i><i class="gr z3"></i>${t ? `<i class="gp z${t % 10} s${Math.floor(t / 10)}"></i>` : ''}</button>`;
   }
   return h + '</div>';
 }
