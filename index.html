@@ -231,6 +231,15 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .roles button.on.r4{border-color:var(--p4);color:var(--p4);background:rgba(255,157,46,.12)}
 .roles button.on.r0{border-color:var(--tx);color:var(--tx)}
 .roles button.x{flex:none;width:auto;padding:6px 10px;color:var(--mg);border-color:rgba(255,43,214,.5);font-family:var(--disp);font-size:10px;letter-spacing:.12em}
+.stat{display:block;width:100%;text-align:left;background:transparent;border:0;padding:5px 0 0;color:var(--dim);font-size:12px;font-family:inherit;cursor:pointer}
+.stat b{color:var(--yl);font-weight:700;margin-left:4px}
+.stat i{font-style:normal;font-size:9px;margin-left:6px}
+.stat.none{cursor:default}
+.statby{margin-top:5px;padding:5px 8px;border-left:2px solid var(--line);font-size:11px;color:var(--dim)}
+.statby div{display:flex;gap:8px;justify-content:space-between;padding:2px 0}
+.statby span{color:var(--tx)}
+.statby b{color:var(--yl);margin-left:4px}
+.statctl{margin-top:10px;text-align:right}
 .tag{display:inline-block;font-family:var(--disp);font-size:9px;letter-spacing:.12em;line-height:1.2;border:1px solid var(--dim);color:var(--dim);background:transparent;padding:3px 6px;margin-left:6px;vertical-align:middle}
 .tag.kick{border-color:var(--mg);color:var(--mg);cursor:pointer}
 .tag.kick:hover{background:rgba(255,43,214,.15)}
@@ -526,7 +535,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
 const CN = ['', 'CYAN', 'MAGENTA', 'LIME', 'ORANGE'];
 const NP = () => (S && S.np) || 2;
@@ -544,6 +553,7 @@ function hostInit() {
         board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
 }
 function broadcast() {
+  if (S.phase === 'result' && !S.counted) { recordStats(); S.counted = true; }
   const pub = S.hb && S.phase === 'playing' ? Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) }) : S;
   const j = JSON.stringify({ t: 'state', s: pub });
   if (net && net.connected) net.publish(TOPIC + me.code + '/state', j, { retain: true, qos: 1 });
@@ -560,7 +570,7 @@ function act(msg) {
 }
 function startGame() {
   if (!allSet()) return;
-  S.np = NP(); S.note = '';
+  S.np = NP(); S.note = ''; S.counted = false;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
                      q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, lastWall: '' });
   if (S.hb) S.turn = 0;
@@ -581,6 +591,16 @@ function drop(cid) {
   delete seen[cid];
   if (m.role === 'spec') S.members = S.members.filter(x => x !== m); else m.online = false;
   broadcast();
+}
+function recordStats() {
+  const st = S.stats = S.stats || {};
+  for (let k = 1; k <= NP(); k++) {
+    const m = memberOf('p' + k); if (!m) continue;
+    const e = st[m.name] = st[m.name] || { t: [0, 0, 0, 0], by: {} };
+    const b = e.by[S.game] = e.by[S.game] || [0, 0, 0, 0];
+    const r = !S.winner ? 3 : S.winner === k ? 1 : 2;
+    e.t[0]++; e.t[r]++; b[0]++; b[r]++;
+  }
 }
 function removeMember(cid, kick) {
   const m = S.members.find(x => x.cid === cid); if (!m || m.host) return;
@@ -903,6 +923,13 @@ function mainHTML() {
     <div class="actions">${btn}</div>
   </section>`;
 }
+function statHTML(m) {
+  const e = (S.stats || {})[m.name];
+  if (!e) return '<div class="stat none">0戦</div>';
+  const f = a => `${a[0]}戦 ${a[1]}勝 ${a[2]}敗 ${a[3]}分<b>${a[0] ? Math.round(a[1] / a[0] * 100) : 0}%</b>`, open = ui.statOpen === m.name;
+  return `<button class="stat" data-act="stat" data-n="${esc(m.name)}" aria-expanded="${open}">${f(e.t)}<i>${open ? '▲' : '▼'}</i></button>` +
+    (open ? `<div class="statby">${Object.keys(e.by).map(g => `<div><span>${GAMES[g] ? GAMES[g].name : esc(g)}</span><em>${f(e.by[g])}</em></div>`).join('')}</div>` : '');
+}
 function sideHTML() {
   const host = me.isHost, lobby = S.phase === 'lobby';
   const items = S.members.map(m => {
@@ -914,9 +941,10 @@ function sideHTML() {
         <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
         ${''}
       </div>` : '';
-    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)}${tag} <em>${m.cid === me.cid ? 'YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${ctl}</li>`;
+    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)}${tag} <em>${m.cid === me.cid ? 'YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${statHTML(m)}${ctl}</li>`;
   }).join('');
   return `<aside class="panel"><h2>MEMBERS // ${S.members.length}</h2><ul class="members">${items}</ul>
+    ${host && S.stats && Object.keys(S.stats).length ? `<div class="statctl"><button class="btn sm" data-act="statreset">勝敗記録をリセット</button></div>` : ''}
     <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
     <button class="btn mg" data-act="leave">${host ? 'ルームを解散する' : 'ルームから退出する'}</button></aside>`;
 }
@@ -956,6 +984,7 @@ document.addEventListener('click', e => {
     if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
     else { ui.sel = -1; act({ t: 'move', i }); }
   }
+  else if (a === 'stat') { ui.statOpen = ui.statOpen === el.dataset.n ? null : el.dataset.n; render(); }
   else if (a === 'leave') { if (confirm(host ? 'ルームを解散しますか？ 全員が退出になります。' : 'ルームから退出しますか？')) leaveRoom(); }
   else if (a === 'hkey') { const d = el.dataset.d; if (ui.hbIn.length < 3 && !ui.hbIn.includes(d)) { ui.hbIn += d; render(); } }
   else if (a === 'hdel') { ui.hbIn = ui.hbIn.slice(0, -1); render(); }
@@ -990,6 +1019,7 @@ document.addEventListener('click', e => {
   else if (a === 'game') { if (S.phase === 'lobby' && GAMES[el.dataset.g]) { S.game = el.dataset.g; setNp((GAMES[S.game].modes || []).includes(S.np) ? S.np : 2); broadcast(); } }
   else if (a === 'np') { const n = Number(el.dataset.n); if (S.phase === 'lobby' && (GAMES[S.game].modes || []).includes(n)) { setNp(n); broadcast(); } }
   else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
+  else if (a === 'statreset') { if (confirm('全員の勝敗記録をリセットしますか？')) { S.stats = {}; broadcast(); } }
   else if (a === 'kick') {
     const m = S.members.find(x => x.cid === el.dataset.cid);
     if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
