@@ -175,7 +175,20 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .jhead em{font-style:normal;font-size:11px;color:var(--yl);margin-left:6px}
 .jhead b{font-family:var(--disp);font-size:20px}
 .jhand{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.jgrp{text-align:center;min-width:0}
+.jgrp{text-align:center;min-width:0;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.04);padding:7px 3px 5px}
+.jgrp small{color:var(--tx);font-weight:700}
+.capips{display:flex;gap:4px;min-height:12px;align-items:center;font-size:12px}
+.capips i{width:14px;height:10px;background:currentColor;box-shadow:0 0 6px currentColor;transform:skewX(-20deg)}
+.cacmds{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cacmds button{min-width:0;padding:8px 2px;background:#03060f;border:1px solid var(--line);color:var(--cy);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;touch-action:manipulation}
+.cacmds button .jc{width:26px;height:26px}
+.cacmds button span{font-size:10px;font-weight:700;color:var(--tx);white-space:nowrap}
+.cacmds button small{font-size:9px;color:var(--dim);font-family:var(--disp)}
+.cacmds button.sel{border-color:var(--yl);background:rgba(246,255,0,.18);box-shadow:0 0 12px var(--yl)}
+.cacmds button:disabled{opacity:.3;cursor:not-allowed}
+.carule{font-size:11px;color:var(--dim);line-height:1.7;border-left:2px solid var(--line);padding:4px 8px}
+.carule b{color:var(--tx)}
+.cahelp{background:transparent;border:0;color:var(--dim);font-size:11px;font-family:inherit;text-decoration:underline;cursor:pointer;justify-self:center}
 .jgrp small{display:block;margin-top:4px;font-size:11px;color:var(--dim)}
 .jrow{display:flex;gap:4px;justify-content:center}
 .jcard{flex:1;max-width:46px;aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;border:1px solid currentColor;background:#03060f;font-size:clamp(14px,4.6vw,20px);font-style:normal;padding:0;margin:0;color:inherit;line-height:1}
@@ -321,7 +334,8 @@ const GAMES = {
   quoridor: { name: 'ムーブ＆ウォール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' },
   gobblet: { name: '被せ3目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。お互いに数字を決めて、ヒットとブローを手がかりに相手の数字を先に当てた方が勝ち。' },
-  janken: { name: 'ポイントじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' }
+  janken: { name: 'ナインじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' },
+  charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
@@ -369,6 +383,34 @@ function drops(b) {
   const r = [];
   for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
   return r;
+}
+const CAC = [0, 1, 0, 1, 3];
+function caInit() { return { en: [0, 1, 1], pick: [null, -1, -1], log: [], gid: Math.random().toString(36).slice(2, 8) }; }
+function caResolve(a, b) {
+  if (a === 3 && b === 3) return [0, 0, 0];
+  if (a === 3) return b === 0 ? [0, 1, 0] : b === 1 || b === 4 ? [1, 0, 0] : [0, 0, 0];
+  if (b === 3) return a === 0 ? [0, 0, 1] : a === 1 || a === 4 ? [2, 0, 0] : [0, 0, 0];
+  if (a === 4 && b === 4) return [0, 0, 0];
+  if (a === 4) return [1, 0, 0];
+  if (b === 4) return [2, 0, 0];
+  if (a === 1 && b === 0) return [1, 0, 0];
+  if (b === 1 && a === 0) return [2, 0, 0];
+  return [0, a === 0 ? 1 : 0, b === 0 ? 1 : 0];
+}
+function caApply(s, i, c) {
+  const g = s.ca;
+  if (s.phase !== 'playing' || !g || !c || c > 2 || !Number.isInteger(i)) return false;
+  const k = i - 40000;
+  if (k < 0 || k > 4 || g.pick[c] >= 0 || g.en[c] < CAC[k]) return false;
+  g.pick[c] = k;
+  if (g.pick[1] >= 0 && g.pick[2] >= 0) {
+    const a = g.pick[1], b = g.pick[2], r = caResolve(a, b);
+    g.log.push([a, b, r[0], g.en[1], g.en[2]]);
+    g.en[1] += r[1] - CAC[a]; g.en[2] += r[2] - CAC[b];
+    g.pick = [null, -1, -1];
+    if (r[0]) finish(s, r[0], 'ko');
+  }
+  return true;
 }
 function jInit() { return { hand: [null, new Array(9).fill(1), new Array(9).fill(1)], pick: [null, -1, -1], sc: [0, 0, 0], log: [], gid: Math.random().toString(36).slice(2, 8) }; }
 function jApply(s, i, c) {
@@ -569,6 +611,7 @@ function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.tu
 function applyMove(s, i, c) {
   if (s.game === 'hitblow') return hApply(s, i, c);
   if (s.game === 'janken') return jApply(s, i, c);
+  if (s.game === 'charge') return caApply(s, i, c);
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
   if (s.game === 'gobblet') return gApply(s, i, c);
@@ -617,7 +660,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0 };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0, caSel: -1, caHelp: false };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
 ui.fxOn = store.get('cb_fx') !== '0';
 const JS0 = '<svg class="jc" viewBox="0 0 24 24" aria-hidden="true">';
@@ -627,6 +670,8 @@ const JE = [
   JS0 + '<path d="M7 12h10v6l-2 2H9l-2-2z"/><path d="M8.5 12V6.5M11 12V4M13.5 12V4.5M16 12V7M7 15l-3-2.5"/></svg>'
 ];
 const JN = ['グー', 'チョキ', 'パー'];
+const CAN = ['チャージ', 'アタック', 'バリア', 'リバース', 'ビクトリー'];
+const CAI = ['M13 3L6 13h5l-1 8 7-10h-5z', 'M4 20L18 6M11 5h8v8', 'M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z', 'M4 9h13l-3-3M20 15H7l3 3', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.3l6.1-.7z'].map(d => JS0 + '<path d="' + d + '"/></svg>');
 const CN = ['', 'CYAN', 'MAGENTA', 'LIME', 'ORANGE'];
 const NP = () => (S && S.np) || 2;
 let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
@@ -646,6 +691,7 @@ function broadcast() {
   if (S.phase === 'result' && !S.counted) { recordStats(); S.counted = true; }
   let pub = S;
   if (S.phase === 'playing' && S.hb) pub = Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) });
+  if (S.phase === 'playing' && S.ca) pub = Object.assign({}, S, { ca: Object.assign({}, S.ca, { pick: S.ca.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
   if (S.phase === 'playing' && S.jk) pub = Object.assign({}, S, { jk: Object.assign({}, S.jk, { pick: S.jk.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
   const j = JSON.stringify({ t: 'state', s: pub });
   if (net && net.connected) net.publish(TOPIC + me.code + '/state', j, { retain: true, qos: 1 });
@@ -664,8 +710,8 @@ function startGame() {
   if (!allSet()) return;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, lastWall: '' });
-  if (S.hb || S.jk) S.turn = 0;
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, lastWall: '' });
+  if (S.hb || S.jk || S.ca) S.turn = 0;
   broadcast();
 }
 function setNp(n) {
@@ -848,8 +894,38 @@ function slotHTML(role) {
   const m = memberOf(role), c = Number(role[1]);
   return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
+function caEn(c) { const g = S.ca, n = g.log.length; return n && ui.jkHold === n ? g.log[n - 1][2 + c] : g.en[c]; }
+function caWhy() {
+  const r = S.ca.log[S.ca.log.length - 1], wa = r[r[2] - 1], la = r[2 - r[2]];
+  return wa === 1 ? 'アタックが命中' : wa === 4 ? 'ビクトリー発動' : CAN[la] + 'をリバースで跳ね返した';
+}
+function caBoardHTML() {
+  const g = S.ca, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L, n = g.log.length;
+  const hold = n > 0 && ui.jkHold === n, last = n ? g.log[n - 1] : null;
+  const canPick = !over && !hold && my && g.pick[my] < 0 && !ui.offline;
+  if (!canPick || (ui.caSel >= 0 && g.en[my] < CAC[ui.caSel])) ui.caSel = -1;
+  const pips = e => `<span class="capips">${'<i></i>'.repeat(Math.min(e, 8))}${e > 8 ? '+' : ''}</span>`;
+  const side = c => `<div class="jside c${c}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && g.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>EN ${caEn(c)}</b></div>${pips(caEn(c))}</div>`;
+  const big = k => `<b class="jbig">${CAI[k]}<small>${CAN[k]}</small></b>`;
+  const txt = r => {
+    const a = r[0], b = r[1];
+    return r[2] ? esc(nameOf(r[2])) + ' の勝ち' : (a === 3 && b === 0) || (b === 3 && a === 0) ? 'チャージを横取り'
+      : (a === 1 && b === 2) || (a === 2 && b === 1) ? 'バリアで防いだ' : a === b && (a === 1 || a === 4) ? '相打ち' : '続行';
+  };
+  const mid = hold ? '<div class="jlast ready"><b>READY</b><span>出そろいました</span></div>'
+    : last ? `<div class="jlast${ui.jkPop === n ? ' pop' : ''}"><div class="c${R}">${big(last[R - 1])}</div><span>${txt(last)}</span><div class="c${L}">${big(last[L - 1])}</div></div>`
+    : '<div class="jlast empty">両者がコマンドを出すと、ここに結果が出ます</div>';
+  const cmds = my ? `<div class="cacmds">${CAN.map((nm, k) => `<button class="${ui.caSel === k ? 'sel' : ''}" data-act="casel" data-k="${k}" ${canPick && g.en[my] >= CAC[k] ? '' : 'disabled'}>${CAI[k]}<span>${nm}</span><small>${k === 0 ? 'EN +1' : CAC[k] ? 'EN -' + CAC[k] : 'EN 0'}</small></button>`).join('')}</div>` : '';
+  const rows = hold ? g.log.slice(0, -1) : g.log, from = Math.max(0, rows.length - 8);
+  const log = rows.length ? `<div class="jlog">${rows.slice(from).map((r, i) => `<span>${from + i + 1}回 ${CAN[r[R - 1]]} - ${CAN[r[L - 1]]}</span>`).join('')}</div>` : '';
+  const help = `<button class="cahelp" data-act="cahelp">${ui.caHelp ? 'ルールを閉じる' : 'ルールを見る'}</button>` + (ui.caHelp ? `<div class="carule">
+      <b>チャージ</b>：EN+1。アタックを受けると負け<br><b>アタック</b>（EN1）：チャージ中の相手を倒す。バリアには防がれる<br>
+      <b>バリア</b>：アタックを防ぐ<br><b>リバース</b>（EN1）：相手のアタックとビクトリーを跳ね返して勝ち。チャージは横取り<br>
+      <b>ビクトリー</b>（EN3）：即勝利。止められるのはリバースだけ<br>アタック同士・ビクトリー同士は相打ちで続行</div>` : '');
+  return `<div class="jk">${side(R)}${mid}${side(L)}${cmds}${log}${help}</div>`;
+}
 function jSync() {
-  const j = S.jk, n = j.log.length;
+  const j = S.jk || S.ca, n = j.log.length;
   if (ui.jkGid !== j.gid) { ui.jkGid = j.gid; ui.jkSeen = n; ui.jkHold = 0; ui.jkPop = 0; return; }
   if (n > ui.jkSeen) {
     ui.jkSeen = n; ui.jkHold = n; ui.jkPop = 0;
@@ -955,6 +1031,7 @@ function boardHTML() {
   if (S.game === 'gobblet') return gBoardHTML();
   if (S.game === 'hitblow') return hBoardHTML();
   if (S.game === 'janken') return jBoardHTML();
+  if (S.game === 'charge') return caBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
   const land = S.game === 'connect4' ? drops(S.board) : null;
@@ -977,11 +1054,15 @@ function boardHTML() {
 }
 function msgHTML() {
   const my = colorOf(me.cid);
-  if (S.jk && ui.jkHold) return '<div class="msg">出そろいました…<small>READY</small></div>';
+  if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">出そろいました…<small>READY</small></div>';
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
+  }
+  if (S.game === 'charge') {
+    const g = S.ca, m = !my ? '観戦中' : g.pick[my] >= 0 ? '相手が出すのを待っています…' : 'コマンドを選んでください';
+    return `<div class="msg">${m}<small>ターン ${g.log.length + 1}</small></div>`;
   }
   if (S.game === 'janken') {
     const j = S.jk, m = !my ? '観戦中' : j.pick[my] >= 0 ? '相手が出すのを待っています…' : '出す手を選んでください';
@@ -1003,7 +1084,7 @@ function msgHTML() {
   return `<div class="msg">${t}${p}${g}</div>`;
 }
 function mainHTML() {
-  if (S.jk && S.phase !== 'lobby') jSync();
+  if ((S.jk || S.ca) && S.phase !== 'lobby') jSync();
   const host = me.isHost, my = colorOf(me.cid);
   if (S.phase === 'lobby') {
     const ready = allSet(), modes = GAMES[S.game].modes;
@@ -1020,7 +1101,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c} ${S.turn === c || (S.winner === c && !(S.jk && ui.jkHold)) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : ''}</div>`;
+  const pl = c => `<div class="pl c${c} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && ui.jkHold)) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -1033,6 +1114,10 @@ function mainHTML() {
         <button data-act="nudge" data-d="2" aria-label="下へ">▼</button>
         <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
       </div>`;
+    }
+    if (S.game === 'charge' && my && !ui.offline && !ui.jkHold && S.ca.pick[my] < 0) {
+      const k = ui.caSel >= 0 && S.ca.en[my] >= CAC[ui.caSel] ? ui.caSel : -1;
+      pad = `<div class="pad"><button class="put" data-act="caput" ${k >= 0 ? '' : 'disabled'}>${k >= 0 ? CAN[k] + 'を出す' : 'コマンドを選んでください'}</button></div>`;
     }
     if (S.game === 'janken' && my && !ui.offline && !ui.jkHold && S.jk.pick[my] < 0) {
       const k = ui.jkSel >= 0 && S.jk.hand[my][ui.jkSel] ? ui.jkSel : -1;
@@ -1113,7 +1198,7 @@ function fxResult() {
   if (!S) return;
   const key = S.gno || 0;
   if (ui.fxRes === undefined) { ui.fxRes = S.phase === 'result' ? key : -1; return; }
-  if (S.phase !== 'result' || ui.fxRes === key || (S.jk && ui.jkHold)) return;
+  if (S.phase !== 'result' || ui.fxRes === key || ((S.jk || S.ca) && ui.jkHold)) return;
   ui.fxRes = key;
   if (!ui.fxOn) return;
   const my = colorOf(me.cid), w = S.winner, kind = !w ? 'draw' : !my ? 'spec' : w === my ? 'win' : 'lose';
@@ -1173,6 +1258,9 @@ document.addEventListener('click', e => {
   else if (a === 'fxtog') { ui.fxOn = !ui.fxOn; store.set('cb_fx', ui.fxOn ? '1' : '0'); render(); }
   else if (a === 'stat') { ui.statOpen = ui.statOpen === el.dataset.n ? null : el.dataset.n; render(); }
   else if (a === 'leave') { if (confirm(host ? 'ルームを解散しますか？ 全員が退出になります。' : 'ルームから退出しますか？')) leaveRoom(); }
+  else if (a === 'casel') { const k = Number(el.dataset.k); ui.caSel = ui.caSel === k ? -1 : k; render(); }
+  else if (a === 'caput') { const k = ui.caSel; if (k >= 0) { ui.caSel = -1; act({ t: 'move', i: 40000 + k }); render(); } }
+  else if (a === 'cahelp') { ui.caHelp = !ui.caHelp; render(); }
   else if (a === 'jsel') { const k = Number(el.dataset.k); ui.jkSel = ui.jkSel === k ? -1 : k; render(); }
   else if (a === 'jput') { const k = ui.jkSel; if (k >= 0) { ui.jkSel = -1; act({ t: 'move', i: 30000 + k }); render(); } }
   else if (a === 'hkey') { const d = el.dataset.d; if (ui.hbIn.length < 3 && !ui.hbIn.includes(d)) { ui.hbIn += d; render(); } }
