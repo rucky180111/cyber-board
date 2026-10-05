@@ -229,7 +229,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .roles button.on.r3{border-color:var(--p3);color:var(--p3);background:rgba(141,255,58,.12)}
 .roles button.on.r4{border-color:var(--p4);color:var(--p4);background:rgba(255,157,46,.12)}
 .roles button.on.r0{border-color:var(--tx);color:var(--tx)}
-.roles button.x{flex:none;width:30px;color:var(--mg)}
+.roles button.x{flex:none;width:auto;padding:6px 10px;color:var(--mg);border-color:rgba(255,43,214,.5);font-family:var(--disp);font-size:10px;letter-spacing:.12em}
+.roles.end{justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -611,7 +612,7 @@ function joinRoom() {
     if (m.t === 'ended') { exitRoom('ホストがルームを解散しました。'); return; }
     if (m.t === 'closed') { if (gotState) { ui.offline = true; render(); } return; }
     if (m.t !== 'state' || !m.s || !Array.isArray(m.s.members)) return;
-    if ((m.s.kicked || []).includes(me.cid)) { exitRoom('ホストによってルームから外されました。'); return; }
+    if ((m.s.kicked || []).includes(me.cid)) { exitRoom('ホストにKICKされました。'); return; }
     if (!m.s.members.some(x => x.cid === me.cid)) { if (gotState) up({ t: 'hello' }); return; }
     S = m.s; gotState = true; ui.screen = 'room'; ui.offline = false;
     store.set('cb_guest', me.code, true);
@@ -848,12 +849,13 @@ function sideHTML() {
   const items = S.members.map(m => {
     const c = colorOf(m.cid);
     const badge = c ? `<b class="badge c${c}">${CN[c]}</b>` : `<b class="badge spec">観戦</b>`;
+    const kb = host && !m.host ? `<button class="x" data-act="kick" data-cid="${esc(m.cid)}">KICK</button>` : '';
     const ctl = host && lobby ? `<div class="roles">
         ${Array.from({ length: NP() }, (_, k) => `<button class="r${k + 1} ${c === k + 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p${k + 1}">${NP() === 2 ? (k ? '後手' : '先手') : 'P' + (k + 1)}</button>`).join('')}
         <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
-        ${''}
-      </div>` : '';
-    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)} <em>${m.host ? 'HOST' : ''}${m.cid === me.cid ? ' YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}${host && !m.host ? `<button class="kick" data-act="kick" data-cid="${esc(m.cid)}">外す</button>` : ''}</div>${ctl}</li>`;
+        ${kb}
+      </div>` : kb ? `<div class="roles end">${kb}</div>` : '';
+    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)} <em>${m.host ? 'HOST' : ''}${m.cid === me.cid ? ' YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${ctl}</li>`;
   }).join('');
   return `<aside class="panel"><h2>MEMBERS // ${S.members.length}</h2><ul class="members">${items}</ul>
     <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
@@ -931,7 +933,7 @@ document.addEventListener('click', e => {
   else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
   else if (a === 'kick') {
     const m = S.members.find(x => x.cid === el.dataset.cid);
-    if (m && !m.host && confirm(m.name + ' をルームから外しますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
+    if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
   }
   else if (a === 'start') startGame();
   else if (a === 'swap') { if (allSet()) { const n = NP(); S.members.forEach(m => { const k = colorOf(m.cid); if (k) m.role = 'p' + (k % n + 1); }); startGame(); } }
