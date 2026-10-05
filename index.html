@@ -399,12 +399,13 @@ const GAMES = {
   gomoku:  { name: '五目並べ', size: 15, modes: [2, 3], desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。2人戦の先手は三三・四四・長連が禁じ手。2人／3人。' },
   connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' },
   quoridor: { name: 'ムーブ＆ウォール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' },
-  gobblet: { name: '被せ3目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
+  gobblet: { name: '被せ三目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。お互いに数字を決めて、ヒットとブローを手がかりに相手の数字を先に当てた方が勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' },
-  dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '順番にドットを打ち、4つのドットで形ができたら打った人の負け。正方形のスクエアモードと、同じ円に乗るサークルモード。通告して判定。2〜4人。' }
+  dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '順番にドットを打ち、4つのドットで形ができたら打った人の負け。正方形のスクエアモードと、同じ円に乗るサークルモード。指摘して判定。2〜4人。' }
 };
+const GORDER = ['reversi', 'gobblet', 'connect4', 'gomoku', 'quoridor', 'dots', 'hitblow', 'janken', 'charge'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
@@ -1041,8 +1042,8 @@ function dBoardHTML() {
   if (!canClaim) ui.dClaim = null;
   if (!myTurn || ui.dClaim || (ui.dSel >= 0 && d.own[ui.dSel])) ui.dSel = -1;
   const cl = ui.dClaim, shown = d.claim && d.claim.ok ? d.claim.pts : [], k = d.claim;
-  const rule = !k ? '' : k.ok ? `<div class="drule ok">${esc(nameOf(k.by))} の通告が成立！ ${esc(nameOf(k.on))} は失格</div>`
-    : `<div class="drule ng">${esc(nameOf(k.by))} の通告は不成立… ${esc(nameOf(k.by))} は失格</div>`;
+  const rule = !k ? '' : k.ok ? `<div class="drule ok">${esc(nameOf(k.by))} の指摘が成立！ ${esc(nameOf(k.on))} は失格</div>`
+    : `<div class="drule ng">${esc(nameOf(k.by))} の指摘は不成立… ${esc(nameOf(k.by))} は失格</div>`;
   let h = `${rule}<div class="board dots" style="--n:${n};aspect-ratio:${n}/${d.own.length / n}">`;
   for (let i = 0; i < d.own.length; i++) {
     const v = d.own[i], cls = ['cell'];
@@ -1233,7 +1234,7 @@ function msgHTML() {
   if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">READY</div>';
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の通告が成立' : '', miss: '通告が外れて失格', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立' : '', miss: '指摘が外れて失格', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
@@ -1254,7 +1255,7 @@ function msgHTML() {
   }
   if (dWait()) {
     const d = S.dt, names = d.pend.map((v, k) => (v ? esc(nameOf(k)) : '')).filter(Boolean).join('、');
-    return `<div class="msg">${d.pend[my] ? '通告しますか？' : '判定待ち'}<small>${d.pend[my] ? esc(nameOf(d.by)) + ' が打ったドットで形ができていれば通告' : names + ' が選択中'}</small></div>`;
+    return `<div class="msg">${d.pend[my] ? '指摘しますか？' : '判定待ち'}<small>${d.pend[my] ? esc(nameOf(d.by)) + ' が打ったドットで形ができていれば指摘' : names + ' が選択中'}</small></div>`;
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
@@ -1272,7 +1273,7 @@ function mainHTML() {
     const ready = allSet(), modes = GAMES[S.game].modes;
     return `<section class="panel">
       <h2>01 // SELECT GAME</h2>
-      <div class="games">${Object.entries(GAMES).map(([k, v]) =>
+      <div class="games">${GORDER.map(k => [k, GAMES[k]]).map(([k, v]) =>
         `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name}</b><small>${v.desc}</small></button>`).join('')}</div>
       ${modes ? `<div class="modes">${modes.map(n => `<button class="${NP() === n ? 'on' : ''}" data-act="np" data-n="${n}" ${host ? '' : 'disabled'}>${n}人で対戦</button>`).join('')}</div>` : ''}
       ${GAMES[S.game].vars ? `<div class="modes">${GAMES[S.game].vars.map(v => `<button class="${(S.dv === 'ci' ? 'ci' : 'sq') === v[0] ? 'on' : ''}" data-act="dvar" data-v="${v[0]}" ${host ? '' : 'disabled'}>${v[1]}モード</button>`).join('')}</div>` : ''}
@@ -1302,7 +1303,7 @@ function mainHTML() {
       const d = S.dt, cl = ui.dClaim;
       if (cl) pad = `<div class="pad"><button class="wide" data-act="dcancel">やめる</button><button class="put" data-act="djudge" ${cl.length === 3 ? '' : 'disabled'}>${cl.length === 3 ? 'この4点で判定' : 'あと' + (3 - cl.length) + '点選ぶ'}</button></div>
         <p class="note dwarn">最後に打たれたドット（選択済み）と、ほかの3点を選びます。外すとあなたが失格です。</p>`;
-      else if (d.pend && d.pend[my]) pad = '<div class="pad"><button class="wide" data-act="dpass">通告なし</button><button class="wide dclaim" data-act="dclaim">通告する</button></div>';
+      else if (d.pend && d.pend[my]) pad = '<div class="pad"><button class="wide" data-act="dpass">指摘しない</button><button class="wide dclaim" data-act="dclaim">指摘する</button></div>';
       else if (S.turn === my && !dWait()) pad = `<div class="pad"><button class="put" data-act="dput" ${ui.dSel >= 0 ? '' : 'disabled'}>ここに打つ</button></div>`;
     }
     if (S.game === 'charge' && my && !ui.offline && !ui.jkHold && S.ca.pick[my] < 0) {
