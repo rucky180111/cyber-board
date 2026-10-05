@@ -120,6 +120,20 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .finbig.num b{color:#fff}
 .finbig.cmd .jc{width:1.7em;height:1.7em;stroke-width:1.4;animation:finpop .6s cubic-bezier(.2,1.8,.4,1) .15s both}
 .msg.finm{border:1px solid var(--yl);color:var(--yl);font-family:var(--disp);letter-spacing:.25em;font-size:17px;text-shadow:0 0 10px var(--yl);animation:blink .4s infinite}
+.dots .cell{background:linear-gradient(rgba(0,240,255,.22),rgba(0,240,255,.22)) center/100% 1px no-repeat,linear-gradient(rgba(0,240,255,.22),rgba(0,240,255,.22)) center/1px 100% no-repeat}
+.dots .stone{inset:19%}
+.dots .pick{outline:2px solid var(--yl);outline-offset:-2px;background-color:rgba(246,255,0,.25);z-index:1}
+.dsvg{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:4}
+.dsvg polygon{fill:rgba(246,255,0,.14)}
+.dsvg circle{fill:none}
+.dsvg polygon,.dsvg circle{stroke:var(--yl);stroke-width:.09;stroke-linejoin:round;filter:drop-shadow(0 0 .12px #fff)}
+.drule{margin:0 auto 10px;max-width:560px;padding:9px 12px;border:1px solid;text-align:center;font-weight:700;font-size:14px}
+.drule.ok{color:var(--yl);border-color:var(--yl);box-shadow:0 0 14px rgba(246,255,0,.3)}
+.drule.ng{color:var(--mg);border-color:var(--mg)}
+.pad .dclaim{border-color:var(--mg);color:var(--mg)}
+.dwarn{text-align:center;margin:8px 0 0;color:var(--mg)}
+.pl.out{opacity:.3}
+.pl.out span{text-decoration:line-through}
 .fxtog{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--disp);font-size:9px;letter-spacing:.12em;padding:4px 7px;cursor:pointer}
 .fxtog.on{border-color:var(--cy);color:var(--cy)}
 .fxov{position:fixed;inset:0;z-index:50;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;animation:fxfade 2.7s ease-out forwards}
@@ -388,7 +402,9 @@ const GAMES = {
   gobblet: { name: '被せ3目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。お互いに数字を決めて、ヒットとブローを手がかりに相手の数字を先に当てた方が勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' },
-  charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' }
+  charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' },
+  dotsq: { name: 'ドット＆スクエア', size: 7, modes: [2, 3, 4], dk: 'sq', desc: '7×7。順番にドットを打ち、4つのドットで正方形（斜めも含む）ができたら打った人の負け。気づいた人が通告して判定。2〜4人。' },
+  dotci: { name: 'ドット＆サークル', size: 8, modes: [2, 3, 4], dk: 'ci', desc: '8×8。順番にドットを打ち、4つのドットが同じ円の上に乗ったら打った人の負け。気づいた人が通告して判定。2〜4人。' }
 };
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
@@ -436,6 +452,51 @@ function drops(b) {
   const r = [];
   for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
   return r;
+}
+function dInit(kind, np) {
+  const n = kind === 'ci' ? 8 : 7;
+  return { n, kind, own: new Array(n * n).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), claim: null };
+}
+function dShape(kind, n, P) {
+  const q = P.map(i => [i % n, Math.floor(i / n)]);
+  if (kind === 'sq') {
+    const d = [];
+    for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) d.push((q[a][0] - q[b][0]) * (q[a][0] - q[b][0]) + (q[a][1] - q[b][1]) * (q[a][1] - q[b][1]));
+    d.sort((x, y) => x - y);
+    return d[0] > 0 && d[0] === d[3] && d[4] === d[5] && d[4] === 2 * d[0];
+  }
+  const col = (a, b, c) => (q[b][0] - q[a][0]) * (q[c][1] - q[a][1]) - (q[b][1] - q[a][1]) * (q[c][0] - q[a][0]) === 0;
+  if (col(0, 1, 2) || col(0, 1, 3) || col(0, 2, 3) || col(1, 2, 3)) return false;
+  const m = [0, 1, 2].map(k => { const x = q[k][0] - q[3][0], y = q[k][1] - q[3][1]; return [x, y, x * x + y * y]; });
+  return m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]) === 0;
+}
+function dNext(d, c, np) { for (let k = 0; k < np; k++) { c = c % np + 1; if (d.alive[c]) return c; } return 0; }
+function dApply(s, i, c) {
+  const d = s.dt, np = s.np;
+  if (s.phase !== 'playing' || !d || !c || !d.alive[c] || !Number.isInteger(i)) return false;
+  if (i >= 50000 && i < 50000 + d.n * d.n) {
+    const k = i - 50000;
+    if (s.turn !== c || d.own[k]) return false;
+    d.own[k] = c; d.last = k; d.by = c; d.open = true; d.claim = null; s.last = k;
+    if (d.own.every(v => v)) { finish(s, 0, 'full'); return true; }
+    s.turn = dNext(d, c, np);
+    return true;
+  }
+  if (i >= 60000000 && i < 61000000) {
+    if (!d.open || c === d.by) return false;
+    const v = i - 60000000, P = [Math.floor(v / 10000), Math.floor(v / 100) % 100, v % 100];
+    if (new Set(P).size !== 3 || P.some(k => k >= d.n * d.n || !d.own[k] || k === d.last)) return false;
+    const pts = [d.last].concat(P), ok = dShape(d.kind, d.n, pts);
+    d.claim = { by: c, on: d.by, pts, ok };
+    d.alive[ok ? d.by : c] = 0;
+    if (ok) d.open = false;
+    const left = [];
+    for (let k = 1; k <= np; k++) if (d.alive[k]) left.push(k);
+    if (left.length === 1) { s.line = ok ? pts : null; finish(s, left[0], ok ? 'shape' : 'miss'); return true; }
+    if (!d.alive[s.turn]) s.turn = dNext(d, s.turn, np);
+    return true;
+  }
+  return false;
 }
 const CAC = [0, 1, 0, 1, 3];
 function caInit() { return { en: [0, 1, 1], pick: [null, -1, -1], log: [], gid: Math.random().toString(36).slice(2, 8) }; }
@@ -665,6 +726,7 @@ function applyMove(s, i, c) {
   if (s.game === 'hitblow') return hApply(s, i, c);
   if (s.game === 'janken') return jApply(s, i, c);
   if (s.game === 'charge') return caApply(s, i, c);
+  if (GAMES[s.game] && GAMES[s.game].dk) return dApply(s, i, c);
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
   if (s.game === 'gobblet') return gApply(s, i, c);
@@ -713,7 +775,7 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0, caSel: -1, caHelp: false };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0, caSel: -1, caHelp: false, dSel: -1, dClaim: null };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
 ui.fxOn = store.get('cb_fx') !== '0';
 ui.finUntil = 0;
@@ -764,7 +826,7 @@ function startGame() {
   if (!allSet()) return;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, lastWall: '' });
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dt: GAMES[S.game].dk ? dInit(GAMES[S.game].dk, S.np) : null, lastWall: '' });
   if (S.hb || S.jk || S.ca) S.turn = 0;
   broadcast();
 }
@@ -948,6 +1010,40 @@ function slotHTML(role) {
   const m = memberOf(role), c = Number(role[1]);
   return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
+function dShapeSVG(d) {
+  const n = d.n, q = d.claim.pts.map(i => [i % n + .5, Math.floor(i / n) + .5]);
+  if (d.kind === 'sq') {
+    const cx = (q[0][0] + q[1][0] + q[2][0] + q[3][0]) / 4, cy = (q[0][1] + q[1][1] + q[2][1] + q[3][1]) / 4;
+    q.sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
+    return `<svg class="dsvg" viewBox="0 0 ${n} ${n}"><polygon points="${q.map(p => p.join(',')).join(' ')}"/></svg>`;
+  }
+  const a = q[0], b = q[1], c = q[2], D = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]));
+  const A = a[0] * a[0] + a[1] * a[1], B = b[0] * b[0] + b[1] * b[1], C = c[0] * c[0] + c[1] * c[1];
+  const ux = (A * (b[1] - c[1]) + B * (c[1] - a[1]) + C * (a[1] - b[1])) / D, uy = (A * (c[0] - b[0]) + B * (a[0] - c[0]) + C * (b[0] - a[0])) / D;
+  return `<svg class="dsvg" viewBox="0 0 ${n} ${n}"><circle cx="${ux.toFixed(3)}" cy="${uy.toFixed(3)}" r="${Math.sqrt((a[0] - ux) * (a[0] - ux) + (a[1] - uy) * (a[1] - uy)).toFixed(3)}"/></svg>`;
+}
+function dBoardHTML() {
+  const d = S.dt, n = d.n, my = colorOf(me.cid), over = S.phase === 'result';
+  const meAlive = my && d.alive[my], myTurn = !over && meAlive && S.turn === my && !ui.offline;
+  const canClaim = !over && meAlive && d.open && d.by !== my && !ui.offline;
+  if (!canClaim) ui.dClaim = null;
+  if (!myTurn || ui.dClaim || (ui.dSel >= 0 && d.own[ui.dSel])) ui.dSel = -1;
+  const cl = ui.dClaim, shown = d.claim && d.claim.ok ? d.claim.pts : [], k = d.claim;
+  const rule = !k ? '' : k.ok ? `<div class="drule ok">${esc(nameOf(k.by))} の通告が成立！ ${esc(nameOf(k.on))} は失格</div>`
+    : `<div class="drule ng">${esc(nameOf(k.by))} の通告は不成立… ${esc(nameOf(k.by))} は失格</div>`;
+  let h = `${rule}<div class="board dots" style="--n:${n}">`;
+  for (let i = 0; i < n * n; i++) {
+    const v = d.own[i], cls = ['cell'];
+    if (i === d.last) cls.push('last');
+    if (shown.includes(i)) cls.push('win');
+    if (cl && (cl.includes(i) || i === d.last)) cls.push('pick');
+    if (!cl && i === ui.dSel) cls.push('sel');
+    const can = cl ? v && i !== d.last : myTurn && !v;
+    h += `<button class="${cls.join(' ')}" data-act="dcell" data-i="${i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : !cl && i === ui.dSel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
+  }
+  if (k && k.ok) h += dShapeSVG(d);
+  return h + '</div>';
+}
 function caEn(c) { const g = S.ca, n = g.log.length; return n && ui.jkHold === n ? g.log[n - 1][2 + c] : g.en[c]; }
 function caWhy() {
   const r = S.ca.log[S.ca.log.length - 1], wa = r[r[2] - 1], la = r[2 - r[2]];
@@ -1096,6 +1192,7 @@ function boardHTML() {
   if (S.game === 'hitblow') return hBoardHTML();
   if (S.game === 'janken') return jBoardHTML();
   if (S.game === 'charge') return caBoardHTML();
+  if (GAMES[S.game].dk) return dBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
   const land = S.game === 'connect4' ? drops(S.board) : null;
@@ -1124,7 +1221,7 @@ function msgHTML() {
   if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">READY</div>';
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の通告が成立' : '', miss: '通告が外れて失格', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
@@ -1146,6 +1243,7 @@ function msgHTML() {
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
+    : GAMES[S.game].dk ? '<small>マスを選んで「ここに打つ」。4点' + (GAMES[S.game].dk === 'sq' ? 'で正方形' : 'が同じ円の上') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1169,7 +1267,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && ui.jkHold)) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : ''}</div>`;
+  const pl = c => `<div class="pl c${c}${S.dt && !S.dt.alive[c] ? ' out' : ''} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && ui.jkHold)) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : S.dt && !S.dt.alive[c] ? '<b class="gh">失格</b>' : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -1182,6 +1280,12 @@ function mainHTML() {
         <button data-act="nudge" data-d="2" aria-label="下へ">▼</button>
         <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
       </div>`;
+    }
+    if (S.dt && my && S.dt.alive[my] && !ui.offline) {
+      const d = S.dt, cl = ui.dClaim;
+      if (cl) pad = `<div class="pad"><button class="wide" data-act="dcancel">やめる</button><button class="put" data-act="djudge" ${cl.length === 3 ? '' : 'disabled'}>${cl.length === 3 ? 'この4点で判定' : 'あと' + (3 - cl.length) + '点選ぶ'}</button></div>
+        <p class="note dwarn">最後に打たれたドット（選択済み）と、ほかの3点を選びます。外すとあなたが失格です。</p>`;
+      else pad = `<div class="pad">${S.turn === my ? `<button class="put" data-act="dput" ${ui.dSel >= 0 ? '' : 'disabled'}>ここに打つ</button>` : ''}${d.open && d.by !== my ? '<button class="wide dclaim" data-act="dclaim">通告する</button>' : ''}</div>`;
     }
     if (S.game === 'charge' && my && !ui.offline && !ui.jkHold && S.ca.pick[my] < 0) {
       const k = ui.caSel >= 0 && S.ca.en[my] >= CAC[ui.caSel] ? ui.caSel : -1;
@@ -1280,7 +1384,7 @@ function fxResult() {
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
-  return S.game === 'charge' ? caWhy() : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : ({ dotsq: 'SQUARE', dotci: 'CIRCLE', gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
 }
 function finHTML() {
   if (!FIN()) return '';
@@ -1353,6 +1457,16 @@ document.addEventListener('click', e => {
   else if (a === 'fxtog') { ui.fxOn = !ui.fxOn; store.set('cb_fx', ui.fxOn ? '1' : '0'); render(); }
   else if (a === 'stat') { ui.statOpen = ui.statOpen === el.dataset.n ? null : el.dataset.n; render(); }
   else if (a === 'leave') { if (confirm(host ? 'ルームを解散しますか？ 全員が退出になります。' : 'ルームから退出しますか？')) leaveRoom(); }
+  else if (a === 'dcell') {
+    const i = Number(el.dataset.i), cl = ui.dClaim;
+    if (cl) { const p = cl.indexOf(i); if (p >= 0) cl.splice(p, 1); else if (cl.length < 3) cl.push(i); }
+    else ui.dSel = ui.dSel === i ? -1 : i;
+    render();
+  }
+  else if (a === 'dput') { const i = ui.dSel; if (i >= 0) { ui.dSel = -1; act({ t: 'move', i: 50000 + i }); render(); } }
+  else if (a === 'dclaim') { ui.dClaim = []; ui.dSel = -1; render(); }
+  else if (a === 'dcancel') { ui.dClaim = null; render(); }
+  else if (a === 'djudge') { const cl = ui.dClaim; if (cl && cl.length === 3) { ui.dClaim = null; act({ t: 'move', i: 60000000 + cl[0] * 10000 + cl[1] * 100 + cl[2] }); render(); } }
   else if (a === 'casel') { const k = Number(el.dataset.k); ui.caSel = ui.caSel === k ? -1 : k; render(); }
   else if (a === 'caput') { const k = ui.caSel; if (k >= 0) { ui.caSel = -1; act({ t: 'move', i: 40000 + k }); render(); } }
   else if (a === 'cahelp') { ui.caHelp = !ui.caHelp; render(); }
