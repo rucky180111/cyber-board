@@ -453,7 +453,7 @@ function drops(b) {
   return r;
 }
 function dInit(kind, np) {
-  const n = 7, r = 8;
+  const n = 8, r = 9;
   return { n, r, kind, own: new Array(n * r).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), pend: new Array(np + 1).fill(0), claim: null };
 }
 function dShape(kind, n, P) {
