@@ -221,6 +221,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .badge{font-family:var(--disp);font-size:9px;letter-spacing:.12em;border:1px solid;padding:3px 6px;flex:none}
 .badge.spec{color:var(--dim)}
 .off{opacity:.4}
+.kick{background:transparent;border:1px solid var(--mg);color:var(--mg);font-size:11px;padding:3px 7px;cursor:pointer;font-family:inherit;flex:none}
 .roles{display:flex;gap:6px;margin-top:8px}
 .roles button{flex:1;background:transparent;border:1px solid var(--line);color:var(--dim);padding:6px 2px;font-size:11px;cursor:pointer;font-family:inherit}
 .roles button.on.r1{border-color:var(--cy);color:var(--cy);background:rgba(0,240,255,.12)}
@@ -501,7 +502,7 @@ function act(msg) {
 }
 function startGame() {
   if (!allSet()) return;
-  S.np = NP();
+  S.np = NP(); S.note = '';
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
                      q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, lastWall: '' });
   if (S.hb) S.turn = 0;
@@ -523,6 +524,17 @@ function drop(cid) {
   if (m.role === 'spec') S.members = S.members.filter(x => x !== m); else m.online = false;
   broadcast();
 }
+function removeMember(cid, kick) {
+  const m = S.members.find(x => x.cid === cid); if (!m || m.host) return;
+  const wasPlayer = colorOf(cid) > 0;
+  S.members = S.members.filter(x => x !== m); delete seen[cid];
+  if (kick) S.kicked = (S.kicked || []).concat(cid).slice(-30);
+  if (wasPlayer && S.phase !== 'lobby') {
+    if (S.phase === 'playing') S.note = m.name + ' が抜けたため、ゲームを中断しました。';
+    S.phase = 'lobby';
+  }
+  broadcast();
+}
 function sweep() {
   if (!S) return;
   const now = Date.now();
@@ -531,6 +543,7 @@ function sweep() {
 function onUp(m) {
   if (!m || typeof m !== 'object' || !S) return;
   const cid = String(m.cid || '').slice(0, 40); if (!cid || cid === me.cid) return;
+  if ((S.kicked || []).includes(cid)) return;
   if (m.t === 'hello' || m.t === 'ping') {
     seen[cid] = Date.now();
     const name = String(m.name || 'GUEST').slice(0, 12);
@@ -539,6 +552,7 @@ function onUp(m) {
     else if (!mem.online || mem.name !== name || m.t === 'hello') { mem.online = true; mem.name = name; broadcast(); }
   }
   else if (m.t === 'bye') drop(cid);
+  else if (m.t === 'leave') removeMember(cid, false);
   else if (S.members.some(x => x.cid === cid)) handle(cid, m);
 }
 function createRoom(bi) {
@@ -594,8 +608,10 @@ function joinRoom() {
   c.on('message', (tp, buf) => {
     if (net !== c) return;
     let m; try { m = JSON.parse(buf.toString()); } catch (e) { return; }
+    if (m.t === 'ended') { exitRoom('ホストがルームを解散しました。'); return; }
     if (m.t === 'closed') { if (gotState) { ui.offline = true; render(); } return; }
     if (m.t !== 'state' || !m.s || !Array.isArray(m.s.members)) return;
+    if ((m.s.kicked || []).includes(me.cid)) { exitRoom('ホストによってルームから外されました。'); return; }
     if (!m.s.members.some(x => x.cid === me.cid)) { if (gotState) up({ t: 'hello' }); return; }
     S = m.s; gotState = true; ui.screen = 'room'; ui.offline = false;
     store.set('cb_guest', me.code, true);
@@ -610,6 +626,21 @@ function fail(msg) {
   net = null; S = null; seen = {}; rehost = false; gotState = false;
   store.del('cb_host'); store.del('cb_guest'); store.del('cb_state');
   ui.screen = 'entry'; ui.offline = false; ui.error = msg; render();
+}
+function exitRoom(msg) {
+  me.code = '';
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  fail(msg);
+}
+function leaveRoom() {
+  const c = net;
+  if (c && c.connected) {
+    if (me.isHost) c.publish(TOPIC + me.code + '/state', JSON.stringify({ t: 'ended' }), { retain: true, qos: 1 });
+    else if (c.up) c.up({ t: 'leave' });
+  }
+  net = null;
+  setTimeout(() => { try { if (c) c.end(); } catch (e) {} }, 800);
+  exitRoom('');
 }
 window.addEventListener('pagehide', () => { if (net && net.up && gotState) net.up({ t: 'bye' }); });
 
@@ -820,17 +851,19 @@ function sideHTML() {
     const ctl = host && lobby ? `<div class="roles">
         ${Array.from({ length: NP() }, (_, k) => `<button class="r${k + 1} ${c === k + 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p${k + 1}">${NP() === 2 ? (k ? '後手' : '先手') : 'P' + (k + 1)}</button>`).join('')}
         <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
-        ${!m.online ? `<button class="x" data-act="kick" data-cid="${esc(m.cid)}" title="削除">×</button>` : ''}
+        ${''}
       </div>` : '';
-    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)} <em>${m.host ? 'HOST' : ''}${m.cid === me.cid ? ' YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${ctl}</li>`;
+    return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)} <em>${m.host ? 'HOST' : ''}${m.cid === me.cid ? ' YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}${host && !m.host ? `<button class="kick" data-act="kick" data-cid="${esc(m.cid)}">外す</button>` : ''}</div>${ctl}</li>`;
   }).join('');
   return `<aside class="panel"><h2>MEMBERS // ${S.members.length}</h2><ul class="members">${items}</ul>
-    <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button></aside>`;
+    <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
+    <button class="btn mg" data-act="leave">${host ? 'ルームを解散する' : 'ルームから退出する'}</button></aside>`;
 }
 function roomHTML() {
   return `<header class="top"><h1 class="logo">CYBER<span>BOARD</span></h1>
       <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
     ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
+    ${S.note && S.phase === 'lobby' ? `<div class="offline">${esc(S.note)}</div>` : ''}
     <div class="layout">${mainHTML()}${sideHTML()}</div>`;
 }
 function render() {
@@ -862,6 +895,7 @@ document.addEventListener('click', e => {
     if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
     else { ui.sel = -1; act({ t: 'move', i }); }
   }
+  else if (a === 'leave') { if (confirm(host ? 'ルームを解散しますか？ 全員が退出になります。' : 'ルームから退出しますか？')) leaveRoom(); }
   else if (a === 'hkey') { const d = el.dataset.d; if (ui.hbIn.length < 3 && !ui.hbIn.includes(d)) { ui.hbIn += d; render(); } }
   else if (a === 'hdel') { ui.hbIn = ui.hbIn.slice(0, -1); render(); }
   else if (a === 'hok') {
@@ -895,7 +929,10 @@ document.addEventListener('click', e => {
   else if (a === 'game') { if (S.phase === 'lobby' && GAMES[el.dataset.g]) { S.game = el.dataset.g; setNp(GAMES[S.game].modes && S.np === 4 ? 4 : 2); broadcast(); } }
   else if (a === 'np') { const n = Number(el.dataset.n); if (S.phase === 'lobby' && (GAMES[S.game].modes || []).includes(n)) { setNp(n); broadcast(); } }
   else if (a === 'role') setRole(el.dataset.cid, el.dataset.role);
-  else if (a === 'kick') { S.members = S.members.filter(m => m.cid !== el.dataset.cid || m.online); broadcast(); }
+  else if (a === 'kick') {
+    const m = S.members.find(x => x.cid === el.dataset.cid);
+    if (m && !m.host && confirm(m.name + ' をルームから外しますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
+  }
   else if (a === 'start') startGame();
   else if (a === 'swap') { if (allSet()) { const n = NP(); S.members.forEach(m => { const k = colorOf(m.cid); if (k) m.role = 'p' + (k % n + 1); }); startGame(); } }
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
