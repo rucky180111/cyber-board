@@ -94,6 +94,32 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 @keyframes fxturn{0%{filter:brightness(2.6)}100%{filter:none}}
 .fx .htab tr.nw td{animation:fxrow .8s ease-out}
 @keyframes fxrow{0%{background:rgba(246,255,0,.55)}100%{background:transparent}}
+.board,.gboard,.bwrap{position:relative}
+.beam{position:absolute;height:6px;margin-top:-3px;transform-origin:0 50%;background:#fff;border-radius:3px;box-shadow:0 0 12px #fff,0 0 30px var(--yl),0 0 60px var(--yl);z-index:5;pointer-events:none;clip-path:inset(-40px 100% -40px 0);animation:beam .45s cubic-bezier(.3,.9,.3,1) .15s forwards,blink .35s ease-in-out .7s infinite}
+@keyframes beam{to{clip-path:inset(-40px -40px -40px -40px)}}
+@keyframes finpop{0%{transform:scale(0) rotate(-12deg);opacity:0;filter:brightness(5)}100%{transform:none;opacity:1;filter:none}}
+@keyframes finwave{0%{transform:none}40%{transform:scale(1.35);filter:brightness(2.6)}100%{transform:none;filter:none}}
+@keyframes finbg{from{opacity:0}}
+@keyframes finburst{to{transform:scale(2.4);opacity:0;filter:blur(6px) brightness(3)}}
+@keyframes fingoal{50%{transform:scale(1.04);filter:brightness(2.2);box-shadow:0 0 30px 8px currentColor,0 0 80px 20px currentColor}}
+@keyframes finko{0%{transform:none;filter:none}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-6px)}60%{transform:translateX(6px);filter:brightness(2.6)}100%{transform:scale(.97);filter:grayscale(1) brightness(.55)}}
+.fin .win .stone{animation:finpop .5s cubic-bezier(.2,1.8,.4,1) calc(.5s + var(--o,0) * .09s) both,pulse .5s ease-in-out 1.1s infinite alternate}
+.fin .gomoku .cell:not(.win) .stone,.fin .connect4 .cell:not(.win) .stone,.fin .gcell:not(.win) .gp{opacity:.28}
+.fin .gcell.win .gp{animation:finpop .5s cubic-bezier(.2,1.8,.4,1) calc(.5s + var(--o,0) * .12s) both}
+.fin .reversi .stone{animation:finwave .6s ease-out calc(var(--w,0) * 45ms) both}
+.fin .qgoal.won{z-index:6;animation:fingoal .5s ease-in-out 3}
+.fin .qcell.last{z-index:5}
+.fin .qcell.last .stone{animation:finwave .5s ease-out 3}
+.fin .qcell.last .stone::after{content:"";position:absolute;inset:-6%;border-radius:50%;border:2px solid #fff;pointer-events:none;animation:fxring .5s ease-out 3}
+.jside.ko{filter:grayscale(1) brightness(.6)}
+.fin .jside.ko{animation:finko .9s ease-in .5s both}
+.finbig{position:absolute;inset:0;z-index:8;pointer-events:none;display:flex;align-items:center;justify-content:center;gap:.22em;font-family:var(--disp);font-weight:900;font-size:clamp(54px,20vw,130px);line-height:1;background:radial-gradient(ellipse at center,rgba(3,5,13,.9),rgba(3,5,13,.45) 65%,transparent);animation:finbg .3s ease-out both}
+.finbig b{border:0;text-shadow:0 0 16px currentColor,0 0 50px currentColor;animation:finpop .5s cubic-bezier(.2,1.8,.4,1) calc(.15s + var(--o,0) * .25s) both}
+.finbig i{font-style:normal;color:var(--dim);font-size:.5em}
+.finbig.num{animation:finbg .3s ease-out both,finburst .4s ease-in 1.55s forwards}
+.finbig.num b{color:#fff}
+.finbig.cmd .jc{width:1.7em;height:1.7em;stroke-width:1.4;animation:finpop .6s cubic-bezier(.2,1.8,.4,1) .15s both}
+.msg.finm{border:1px solid var(--yl);color:var(--yl);font-family:var(--disp);letter-spacing:.25em;font-size:17px;text-shadow:0 0 10px var(--yl);animation:blink .4s infinite}
 .fxtog{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--disp);font-size:9px;letter-spacing:.12em;padding:4px 7px;cursor:pointer}
 .fxtog.on{border-color:var(--cy);color:var(--cy)}
 .fxov{position:fixed;inset:0;z-index:50;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;animation:fxfade 2.7s ease-out forwards}
@@ -209,6 +235,33 @@ button.jcard:disabled{cursor:default}
 @keyframes don{0%{background:rgba(246,255,0,.55);box-shadow:0 0 40px var(--yl)}100%{background:transparent;box-shadow:none}}
 @keyframes donb{0%{transform:scale(2.8);opacity:0}55%{opacity:1}100%{transform:scale(1)}}
 .jbig small{display:block;font-size:11px;font-family:var(--disp)}
+.jlast,.jhead{position:relative}
+.jlast .jl{opacity:.4;filter:grayscale(.8)}
+.jlast.p2 span{font-size:15px}
+.jlast.p3 span{font-size:19px;text-shadow:0 0 12px var(--yl)}
+.jlast.pop.p0{animation:none}
+.jlast.pop.p3{animation:don3 .9s ease-out}
+.jlast.pop span{animation:finpop .4s ease-out .25s both}
+.jlast.pop .jw .jbig{animation:jwin .6s cubic-bezier(.2,1.8,.4,1) both}
+.jlast.pop.p2 .jw .jbig{animation-name:jwin2}
+.jlast.pop.p3 .jw .jbig{animation-name:jwin3;animation-duration:.85s}
+.jlast.pop .jl .jbig{animation:jlosec .7s ease-out both}
+.jlast.pop.p0 .jbig{animation:jaiko .55s ease-in-out both}
+@keyframes don3{0%{background:#fff;box-shadow:0 0 70px 10px var(--yl)}25%{background:rgba(246,255,0,.7)}100%{background:transparent;box-shadow:none}}
+@keyframes jwin{0%{transform:scale(2.6);opacity:0}60%{transform:scale(1.25);opacity:1;filter:brightness(2)}100%{transform:scale(1.1)}}
+@keyframes jwin2{0%{transform:scale(3.2);opacity:0}55%{transform:scale(1.5);opacity:1;filter:brightness(2.6)}100%{transform:scale(1.2)}}
+@keyframes jwin3{0%{transform:scale(4.6) rotate(-20deg);opacity:0}45%{transform:scale(1.9) rotate(6deg);opacity:1;filter:brightness(3.6)}70%{transform:scale(1.25) rotate(-3deg)}100%{transform:scale(1.35)}}
+@keyframes jlosec{0%{transform:scale(2.6);opacity:0}40%{transform:scale(1);opacity:1}60%{transform:translateX(-5px) rotate(-9deg)}80%{transform:translateX(5px) rotate(6deg)}100%{transform:scale(.8)}}
+@keyframes jaiko{0%{transform:scale(2.6);opacity:0}50%{transform:scale(1.1);opacity:1}65%{transform:translateX(-4px)}80%{transform:translateX(4px)}100%{transform:none}}
+.jk.pop .jside.won .jhead b{animation:finwave .5s ease-out}
+.jk.pop .jside.lost{animation:jlost .6s ease-out}
+@keyframes jlost{30%{filter:brightness(.4) saturate(.3)}}
+.jk.shake{animation:jshake .45s ease-in-out}
+@keyframes jshake{15%{transform:translate(-7px,3px)}30%{transform:translate(6px,-4px)}45%{transform:translate(-5px,-2px)}60%{transform:translate(4px,3px)}80%{transform:translate(-2px,-1px)}}
+.jplus{position:absolute;right:0;top:-4px;text-decoration:none;font-family:var(--disp);font-weight:900;font-size:16px;color:var(--yl);text-shadow:0 0 10px var(--yl);pointer-events:none;animation:jplus 1.1s ease-out forwards}
+.jplus.l2{font-size:24px}
+.jplus.l3{font-size:34px}
+@keyframes jplus{0%{transform:translateY(12px) scale(.4);opacity:0}25%{transform:translateY(-8px) scale(1.25);opacity:1}100%{transform:translateY(-38px);opacity:0}}
 .jlog{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--dim);justify-content:center}
 .hb{max-width:560px;margin:10px auto 0}
 .hsides,.htabs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -663,6 +716,7 @@ store.set('cb_cid', me.cid, true);
 const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0, caSel: -1, caHelp: false };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
 ui.fxOn = store.get('cb_fx') !== '0';
+ui.finUntil = 0;
 const JS0 = '<svg class="jc" viewBox="0 0 24 24" aria-hidden="true">';
 const JE = [
   JS0 + '<path d="M6 10l3-4h6l3 4v6l-3 3H9l-3-3z"/><path d="M9.5 10v3M12 10v3M14.5 10v3"/></svg>',
@@ -905,14 +959,14 @@ function caBoardHTML() {
   const canPick = !over && !hold && my && g.pick[my] < 0 && !ui.offline;
   if (!canPick || (ui.caSel >= 0 && g.en[my] < CAC[ui.caSel])) ui.caSel = -1;
   const pips = e => `<span class="capips">${'<i></i>'.repeat(Math.min(e, 8))}${e > 8 ? '+' : ''}</span>`;
-  const side = c => `<div class="jside c${c}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && g.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>EN ${caEn(c)}</b></div>${pips(caEn(c))}</div>`;
+  const side = c => `<div class="jside c${c}${over && S.winner && S.winner !== c && S.why === 'ko' ? ' ko' : ''}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && g.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>EN ${caEn(c)}</b></div>${pips(caEn(c))}</div>`;
   const big = k => `<b class="jbig">${CAI[k]}<small>${CAN[k]}</small></b>`;
   const txt = r => {
     const a = r[0], b = r[1];
     return r[2] ? esc(nameOf(r[2])) + ' の勝ち' : (a === 3 && b === 0) || (b === 3 && a === 0) ? 'チャージを横取り'
       : (a === 1 && b === 2) || (a === 2 && b === 1) ? 'バリアで防いだ' : a === b && (a === 1 || a === 4) ? '相打ち' : '続行';
   };
-  const mid = hold ? '<div class="jlast ready"><b>READY</b><span>出そろいました</span></div>'
+  const mid = hold ? '<div class="jlast ready"><b>READY</b></div>'
     : last ? `<div class="jlast${ui.jkPop === n ? ' pop' : ''}"><div class="c${R}">${big(last[R - 1])}</div><span>${txt(last)}</span><div class="c${L}">${big(last[L - 1])}</div></div>`
     : '<div class="jlast empty">両者がコマンドを出すと、ここに結果が出ます</div>';
   const cmds = my ? `<div class="cacmds">${CAN.map((nm, k) => `<button class="${ui.caSel === k ? 'sel' : ''}" data-act="casel" data-k="${k}" ${canPick && g.en[my] >= CAC[k] ? '' : 'disabled'}>${CAI[k]}<span>${nm}</span><small>${k === 0 ? 'EN +1' : CAC[k] ? 'EN -' + CAC[k] : 'EN 0'}</small></button>`).join('')}</div>` : '';
@@ -941,6 +995,14 @@ function jSc(c) {
   const j = S.jk, n = j.log.length, r = n && ui.jkHold === n ? j.log[n - 1] : null;
   return j.sc[c] - (r && r[2] === c ? Math.floor(r[c - 1] / 3) + 1 : 0);
 }
+function jSpark(lv) {
+  let h = '';
+  for (let k = 0, n = lv === 3 ? 22 : 8; k < n; k++) {
+    const a = Math.random() * 6.283, d = (lv === 3 ? 60 : 36) + Math.random() * (lv === 3 ? 95 : 40);
+    h += `<i class="fxp" style="--x:${(Math.cos(a) * d).toFixed(0)}px;--y:${(Math.sin(a) * d).toFixed(0)}px;--d:${(.15 + Math.random() * .2).toFixed(2)}s;--s:${(3 + Math.random() * 5).toFixed(0)}px"></i>`;
+  }
+  return h;
+}
 function jBoardHTML() {
   const j = S.jk, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L;
   const hold = j.log.length > 0 && ui.jkHold === j.log.length, hl = hold ? j.log[j.log.length - 1] : null;
@@ -952,12 +1014,13 @@ function jBoardHTML() {
     return inter ? `<button class="jcard${has ? '' : ' used'}${ui.jkSel === k ? ' sel' : ''}" data-act="jsel" data-k="${k}" ${has && canPick ? '' : 'disabled'} aria-label="${JN[t]} ${p + 1}点" title="${JN[t]}">${JE[t]}</button>`
                  : `<i class="jcard${has ? '' : ' used'}" title="${JN[t]}">${JE[t]}</i>`;
   }).join('')}</div><small>${p + 1}点</small></div>`).join('')}</div>`;
-  const side = (c, inter) => `<div class="jside c${c}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && j.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>${jSc(c)}点</b></div>${hand(c, inter)}</div>`;
+  const side = (c, inter) => `<div class="jside c${c}${pop && wn ? (wn === c ? ' won' : ' lost') : ''}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && j.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>${jSc(c)}点</b>${pop && ui.fxOn && wn === c ? `<u class="jplus l${wp}">+${wp}</u>` : ''}</div>${hand(c, inter)}</div>`;
   const big = k => `<b class="jbig">${JE[k % 3]}<small>${pts(k)}点</small></b>`, last = j.log[j.log.length - 1];
-  const mid = hold ? '<div class="jlast ready"><b>READY</b><span>出そろいました</span></div>' : last ? `<div class="jlast${ui.jkPop === j.log.length ? ' pop' : ''}"><div class="c${R}">${big(last[R - 1])}</div><span>${last[2] ? esc(nameOf(last[2])) + ' +' + pts(last[last[2] - 1]) : 'あいこ'}</span><div class="c${L}">${big(last[L - 1])}</div></div>`
+  const pop = !hold && !!last && ui.jkPop === j.log.length, wn = last && !hold ? last[2] : 0, wp = wn ? pts(last[wn - 1]) : 0;
+  const mid = hold ? '<div class="jlast ready"><b>READY</b></div>' : last ? `<div class="jlast p${wp}${pop ? ' pop' : ''}"><div class="c${R}${wn ? (wn === R ? ' jw' : ' jl') : ''}">${big(last[R - 1])}</div><span>${last[2] ? esc(nameOf(last[2])) + ' +' + pts(last[last[2] - 1]) : 'あいこ'}</span><div class="c${L}${wn ? (wn === L ? ' jw' : ' jl') : ''}">${big(last[L - 1])}</div>${pop && ui.fxOn && wp >= 2 ? jSpark(wp) : ''}</div>`
                    : '<div class="jlast empty">両者が手を出すと、ここに結果が出ます</div>';
   const log = j.log.length ? `<div class="jlog">${(hold ? j.log.slice(0, -1) : j.log).map((r, n) => `<span>${n + 1}回 ${JE[r[R - 1] % 3]}${pts(r[R - 1])} - ${JE[r[L - 1] % 3]}${pts(r[L - 1])}</span>`).join('')}</div>` : '';
-  return `<div class="jk">${side(R, false)}${mid}${side(L, !!my)}${log}</div>`;
+  return `<div class="jk${pop ? ' pop' : ''}${pop && ui.fxOn && wp === 3 ? ' shake' : ''}">${side(R, false)}${mid}${side(L, !!my)}${log}</div>`;
 }
 function hMine() {
   const my = colorOf(me.cid), hb = S.hb;
@@ -985,6 +1048,7 @@ function gBoardHTML() {
   if (ui.gs && (!my || (ui.gs.k === 'b' ? Math.floor(gTop(g.st[ui.gs.from]) / 10) !== my : !g.hand[my][ui.gs.size - 1]))) ui.gs = null;
   const sel = myTurn ? ui.gs : null, size = !sel ? 0 : sel.k === 'h' ? sel.size : gTop(g.st[sel.from]) % 10;
   let h = '<div class="gboard">';
+  if (S.line && FIN()) h += beamHTML(S.line, 3, 3);
   for (let i = 0; i < 9; i++) {
     const t = gTop(g.st[i]), own = myTurn && Math.floor(t / 10) === my, from = sel && sel.k === 'b' && sel.from === i;
     const tgt = sel && !from && gCan(g, size, i), cls = ['gcell'];
@@ -1002,7 +1066,7 @@ function qBoardHTML() {
   const mv = new Set(myTurn && ui.qmode === 'move' ? qMoves(q, my) : []);
   const sides = np === 2 ? ['', 'top', 'bottom'] : ['', 'top', 'right', 'bottom', 'left'];
   let h = '<div class="qboard">';
-  for (let c = 1; c <= np; c++) h += `<i class="qgoal ${sides[c]} c${c}"></i>`;
+  for (let c = 1; c <= np; c++) h += `<i class="qgoal ${sides[c]} c${c}${S.winner === c ? ' won' : ''}"></i>`;
   for (let i = 0; i < 81; i++) {
     const x = i % 9, y = (i - x) / 9, c = q.pos.indexOf(i);
     h += `<button class="qcell${mv.has(i) ? ' hint' : ''}${i === S.last ? ' last' : ''}" style="left:${f(x * P)};top:${f(y * P)}" data-act="move" data-i="${i}" ${mv.has(i) ? '' : 'disabled'} aria-label="${x + 1},${y + 1}">${c > 0 ? `<i class="stone s${c}"></i>` : i === q.from ? `<i class="stone s${q.who} trail"></i>` : ''}</button>`;
@@ -1038,6 +1102,9 @@ function boardHTML() {
   const hints = new Set(!myTurn ? [] : land ? land.filter(i => i >= 0) : S.game === 'reversi' ? legal(S.board, my) : []);
   const ban = new Set(S.game === 'gomoku' && NP() === 2 && S.phase === 'playing' && S.turn === 1 ? S.board.map((v, i) => !v && rForbidden(S.board, i % 15, Math.floor(i / 15), 0) ? i : -1).filter(i => i >= 0) : []);
   let h = `<div class="board ${S.game}" style="--n:${n}${land ? ';aspect-ratio:7/6' : ''}">`;
+  const wo = {};
+  if (S.line) S.line.slice().sort((p, q) => p - q).forEach((v, k) => { wo[v] = k; });
+  if (S.line && FIN()) h += beamHTML(S.line, n, S.board.length / n);
   S.board.forEach((v, i) => {
     const cls = ['cell'];
     if (i === S.last) cls.push('last');
@@ -1048,13 +1115,14 @@ function boardHTML() {
     const sel = myTurn && S.game === 'gomoku' && i === ui.sel;
     if (sel) cls.push('sel');
     const can = myTurn && !v && !ban.has(i) && (S.game === 'gomoku' || hints.has(i) || (land && land[i % n] >= 0));
-    h += `<button class="${cls.join(' ')}" data-act="move" data-i="${land ? land[i % n] : i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
+    h += `<button class="${cls.join(' ')}" style="--w:${i % n + Math.floor(i / n)}${wo[i] !== undefined ? ';--o:' + wo[i] : ''}" data-act="move" data-i="${land ? land[i % n] : i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
   });
   return h + '</div>';
 }
 function msgHTML() {
   const my = colorOf(me.cid);
-  if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">出そろいました…<small>READY</small></div>';
+  if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">READY</div>';
+  if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
     const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
@@ -1156,7 +1224,7 @@ function mainHTML() {
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
-    <div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>${msgHTML()}${boardHTML()}${pad}
+    <div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
     <div class="actions">${btn}</div>
   </section>`;
 }
@@ -1201,6 +1269,33 @@ function fxResult() {
   if (S.phase !== 'result' || ui.fxRes === key || ((S.jk || S.ca) && ui.jkHold)) return;
   ui.fxRes = key;
   if (!ui.fxOn) return;
+  const dur = !S.winner || S.why === 'resign' ? 0 : ({ hitblow: 2000, reversi: 1800 })[S.game] || 1500;
+  if (!dur) { fxOverlay(); return; }
+  ui.finUntil = Date.now() + dur;
+  render();
+  setTimeout(() => {
+    ui.finUntil = 0;
+    if (S && (S.gno || 0) === key && S.phase === 'result') { render(); fxOverlay(); }
+  }, dur);
+}
+function FIN() { return ui.finUntil > Date.now(); }
+function finLabel() {
+  return S.game === 'charge' ? caWhy() : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+}
+function finHTML() {
+  if (!FIN()) return '';
+  const w = S.winner;
+  if (S.game === 'reversi') return `<div class="finbig"><b class="c1">${count(S.board, 1)}</b><i>-</i><b class="c2" style="--o:1">${count(S.board, 2)}</b></div>`;
+  if (S.game === 'janken') return `<div class="finbig"><b class="c1">${S.jk.sc[1]}</b><i>-</i><b class="c2" style="--o:1">${S.jk.sc[2]}</b></div>`;
+  if (S.game === 'hitblow') { const g = S.hb.g[w], n = g[g.length - 1].n; return `<div class="finbig num">${n.split('').map((d, k) => `<b style="--o:${k}">${d}</b>`).join('')}</div>`; }
+  if (S.game === 'charge') { const r = S.ca.log[S.ca.log.length - 1]; return `<div class="finbig cmd c${w}">${CAI[r[w - 1]]}</div>`; }
+  return '';
+}
+function beamHTML(line, cols, rows) {
+  const a = Math.min.apply(null, line), b = Math.max.apply(null, line), x0 = a % cols, y0 = Math.floor(a / cols), dx = b % cols - x0, dy = Math.floor(b / cols) - y0;
+  return `<i class="beam" style="left:${((x0 + .5) / cols * 100).toFixed(2)}%;top:${((y0 + .5) / rows * 100).toFixed(2)}%;width:${(Math.sqrt(dx * dx + dy * dy) / cols * 100).toFixed(2)}%;transform:rotate(${(Math.atan2(dy, dx) * 180 / Math.PI).toFixed(1)}deg)"></i>`;
+}
+function fxOverlay() {
   const my = colorOf(me.cid), w = S.winner, kind = !w ? 'draw' : !my ? 'spec' : w === my ? 'win' : 'lose';
   const text = kind === 'draw' ? 'DRAW' : kind === 'win' ? 'YOU WIN' : kind === 'lose' ? 'YOU LOSE' : 'WINNER';
   const sub = kind === 'draw' ? '引き分け' : kind === 'win' ? 'VICTORY' : nameOf(w) + ' の勝ち';
@@ -1224,7 +1319,7 @@ function roomHTML() {
       <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
     ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
     ${S.note && S.phase === 'lobby' ? `<div class="offline">${esc(S.note)}</div>` : ''}
-    <div class="layout${ui.fx ? ' fx' : ''}">${mainHTML()}${sideHTML()}</div>`;
+    <div class="layout${ui.fx ? ' fx' : ''}${FIN() ? ' fin' : ''}">${mainHTML()}${sideHTML()}</div>`;
 }
 function render() {
   const app = $('#app');
