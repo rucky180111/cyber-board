@@ -81,7 +81,42 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .connect4 .cell::before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(0,240,255,.3);background:#02030a}
 .connect4 .stone{inset:8%;z-index:1}
 .connect4 .hint::after{content:"";position:absolute;inset:40%;border-radius:50%;background:var(--yl);opacity:.75;box-shadow:0 0 8px var(--yl);z-index:1}
-.connect4 .last .stone{animation:drop .35s ease-in}
+.fx .last .stone,.fx .gcell.last .gp{animation:fxspawn .45s cubic-bezier(.2,1.6,.4,1)}
+.fx .last .stone::after,.fx .gcell.last .gp::after{content:"";position:absolute;inset:-6%;border-radius:50%;border:2px solid #fff;pointer-events:none;animation:fxring .6s ease-out forwards}
+@keyframes fxspawn{0%{transform:scale(0);filter:brightness(4)}60%{filter:brightness(2)}100%{transform:scale(1);filter:brightness(1)}}
+@keyframes fxring{0%{transform:scale(.6);opacity:1}100%{transform:scale(2.6);opacity:0}}
+.fx .connect4 .last .stone{animation:drop .4s cubic-bezier(.5,0,.8,.4)}
+.fx .flip .stone{animation:fxflip .5s ease-out}
+@keyframes fxflip{0%{transform:rotateY(180deg) scale(1.25);filter:brightness(3.5)}100%{transform:none;filter:none}}
+.fx .qwall.new{animation:fxwall .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes fxwall{0%{transform:scale(0);filter:brightness(4)}100%{transform:none;filter:none}}
+.fx .pl.act{animation:fxturn .6s ease-out}
+@keyframes fxturn{0%{filter:brightness(2.6)}100%{filter:none}}
+.fx .htab tr.nw td{animation:fxrow .8s ease-out}
+@keyframes fxrow{0%{background:rgba(246,255,0,.55)}100%{background:transparent}}
+.fxtog{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--disp);font-size:9px;letter-spacing:.12em;padding:4px 7px;cursor:pointer}
+.fxtog.on{border-color:var(--cy);color:var(--cy)}
+.fxov{position:fixed;inset:0;z-index:50;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;animation:fxfade 2.7s ease-out forwards}
+@keyframes fxfade{0%{background:rgba(255,255,255,.4)}7%{background:rgba(3,5,13,.74)}80%{background:rgba(3,5,13,.74);opacity:1}100%{background:rgba(3,5,13,0);opacity:0}}
+.fxbar{position:absolute;left:0;right:0;top:50%;height:24vmin;background:linear-gradient(90deg,transparent,currentColor 20%,currentColor 80%,transparent);opacity:.16;transform:translateY(-50%) scaleX(0);animation:fxbar .5s cubic-bezier(.2,1,.3,1) .05s forwards}
+@keyframes fxbar{to{transform:translateY(-50%) scaleX(1)}}
+.fxtxt{position:relative;font-family:var(--disp);font-weight:900;font-size:clamp(40px,13vw,120px);letter-spacing:.08em;white-space:nowrap;color:#fff;text-shadow:0 0 18px currentColor,0 0 60px currentColor;animation:fxin .55s cubic-bezier(.2,1.5,.3,1) both}
+.fxtxt::before,.fxtxt::after{content:attr(data-t);position:absolute;left:0;top:0;width:100%;text-shadow:none;opacity:.85;mix-blend-mode:screen}
+.fxtxt::before{color:var(--cy);animation:fxsl 1.1s steps(1) .35s 1 both}
+.fxtxt::after{color:var(--mg);animation:fxsr 1.1s steps(1) .35s 1 both}
+@keyframes fxin{0%{transform:scale(3.2);opacity:0;filter:blur(12px)}100%{transform:scale(1);opacity:1;filter:blur(0)}}
+@keyframes fxsl{0%,100%{transform:none;clip-path:inset(0 0 100% 0)}15%{transform:translate(-7px,2px);clip-path:inset(10% 0 55% 0)}35%{transform:translate(5px,-2px);clip-path:inset(62% 0 8% 0)}55%{transform:translate(-4px,0);clip-path:inset(30% 0 40% 0)}75%{transform:translate(3px,1px);clip-path:inset(75% 0 5% 0)}}
+@keyframes fxsr{0%,100%{transform:none;clip-path:inset(0 0 100% 0)}15%{transform:translate(7px,-2px);clip-path:inset(58% 0 12% 0)}35%{transform:translate(-5px,2px);clip-path:inset(8% 0 62% 0)}55%{transform:translate(4px,0);clip-path:inset(45% 0 25% 0)}75%{transform:translate(-3px,-1px);clip-path:inset(5% 0 80% 0)}}
+.fxsub{position:relative;margin-top:10px;font-family:var(--disp);letter-spacing:.3em;font-size:clamp(11px,3vw,18px);animation:fxin .5s ease-out .25s both}
+.fxov.win{color:var(--yl)}
+.fxov.lose{color:var(--mg)}
+.fxov.draw{color:var(--tx)}
+.fxov.lose .fxtxt{font-size:clamp(30px,9vw,80px)}
+.fxp{position:absolute;left:50%;top:50%;width:var(--s);height:var(--s);background:currentColor;box-shadow:0 0 10px currentColor;animation:fxp 1.2s cubic-bezier(.1,.8,.3,1) var(--d) both}
+.fxp:nth-child(3n){color:var(--cy)}
+.fxp:nth-child(3n+1){color:var(--mg)}
+@keyframes fxp{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(0) rotate(200deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){.fx *{animation:none!important}.fxov{display:none}}
 .connect4 .win .stone{animation:pulse .8s infinite alternate}
 @keyframes drop{from{transform:translateY(-320%);opacity:.3}}
 .game{background:#03050d;border:1px solid var(--line);color:var(--tx);padding:16px 12px;cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
@@ -151,7 +186,15 @@ button.jcard:disabled{cursor:default}
 .jlast{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;text-align:center;padding:8px;border:1px dashed var(--line)}
 .jlast span{font-weight:700;color:var(--yl);font-size:13px}
 .jlast.empty{display:block;color:var(--dim);font-size:12px}
-.jbig{font-size:32px;font-weight:400;line-height:1.1}
+.jbig{display:inline-block;font-size:32px;font-weight:400;line-height:1.1}
+.jc{width:1.15em;height:1.15em;vertical-align:-.22em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 2px currentColor)}
+.jcard .jc{width:66%;height:66%}
+.jlast.ready{display:block;padding:14px 8px;border-style:solid;border-color:var(--yl);animation:blink .5s infinite}
+.jlast.ready b{display:block;font-family:var(--disp);font-size:26px;letter-spacing:.3em;color:var(--yl);text-shadow:0 0 12px var(--yl)}
+.jlast.pop{animation:don .5s ease-out}
+.jlast.pop .jbig{animation:donb .5s cubic-bezier(.2,1.7,.4,1)}
+@keyframes don{0%{background:rgba(246,255,0,.55);box-shadow:0 0 40px var(--yl)}100%{background:transparent;box-shadow:none}}
+@keyframes donb{0%{transform:scale(2.8);opacity:0}55%{opacity:1}100%{transform:scale(1)}}
 .jbig small{display:block;font-size:11px;font-family:var(--disp)}
 .jlog{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:11px;color:var(--dim);justify-content:center}
 .hb{max-width:560px;margin:10px auto 0}
@@ -327,7 +370,7 @@ function drops(b) {
   for (let x = 0; x < 7; x++) { let y = 5; while (y >= 0 && b[y * 7 + x]) y--; r.push(y < 0 ? -1 : y * 7 + x); }
   return r;
 }
-function jInit() { return { hand: [null, new Array(9).fill(1), new Array(9).fill(1)], pick: [null, -1, -1], sc: [0, 0, 0], log: [] }; }
+function jInit() { return { hand: [null, new Array(9).fill(1), new Array(9).fill(1)], pick: [null, -1, -1], sc: [0, 0, 0], log: [], gid: Math.random().toString(36).slice(2, 8) }; }
 function jApply(s, i, c) {
   const j = s.jk;
   if (s.phase !== 'playing' || !j || !c || c > 2 || !Number.isInteger(i)) return false;
@@ -574,9 +617,16 @@ const rnd = n => { const ch = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; fo
 
 const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name') || '', isHost: false, code: '' };
 store.set('cb_cid', me.cid, true);
-const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1 };
+const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0 };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
-const JE = ['✊', '✌', '✋'];
+ui.fxOn = store.get('cb_fx') !== '0';
+const JS0 = '<svg class="jc" viewBox="0 0 24 24" aria-hidden="true">';
+const JE = [
+  JS0 + '<path d="M6 10l3-4h6l3 4v6l-3 3H9l-3-3z"/><path d="M9.5 10v3M12 10v3M14.5 10v3"/></svg>',
+  JS0 + '<path d="M8 14h8v4l-2 2h-4l-2-2z"/><path d="M10 14L7 4M14 14l3-10"/></svg>',
+  JS0 + '<path d="M7 12h10v6l-2 2H9l-2-2z"/><path d="M8.5 12V6.5M11 12V4M13.5 12V4.5M16 12V7M7 15l-3-2.5"/></svg>'
+];
+const JN = ['グー', 'チョキ', 'パー'];
 const CN = ['', 'CYAN', 'MAGENTA', 'LIME', 'ORANGE'];
 const NP = () => (S && S.np) || 2;
 let S = null, net = null, seen = {}, joinTimer = 0, pingTimer = 0, sweepTimer = 0, rehost = false, gotState = false;
@@ -603,7 +653,7 @@ function broadcast() {
   render();
 }
 function handle(cid, msg) {
-  if (msg.t === 'move') { if (applyMove(S, msg.i, colorOf(cid))) broadcast(); }
+  if (msg.t === 'move') { if (applyMove(S, msg.i, colorOf(cid))) { S.mv = (S.mv || 0) + 1; broadcast(); } }
   else if (msg.t === 'resign') { const c = colorOf(cid); if (S.phase === 'playing' && c) { finish(S, 3 - c, 'resign'); broadcast(); } }
 }
 function act(msg) {
@@ -612,7 +662,7 @@ function act(msg) {
 }
 function startGame() {
   if (!allSet()) return;
-  S.np = NP(); S.note = ''; S.counted = false;
+  S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
                      q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, lastWall: '' });
   if (S.hb || S.jk) S.turn = 0;
@@ -757,6 +807,7 @@ function fail(msg) {
   try { if (net) net.end(true); } catch (e) {}
   net = null; S = null; seen = {}; rehost = false; gotState = false;
   store.del('cb_host'); store.del('cb_guest'); store.del('cb_state');
+  ui.fxKey = undefined; ui.fxRes = undefined; ui.pb = null;
   ui.screen = 'entry'; ui.offline = false; ui.error = msg; render();
 }
 function exitRoom(msg) {
@@ -797,21 +848,39 @@ function slotHTML(role) {
   const m = memberOf(role), c = Number(role[1]);
   return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
+function jSync() {
+  const j = S.jk, n = j.log.length;
+  if (ui.jkGid !== j.gid) { ui.jkGid = j.gid; ui.jkSeen = n; ui.jkHold = 0; ui.jkPop = 0; return; }
+  if (n > ui.jkSeen) {
+    ui.jkSeen = n; ui.jkHold = n; ui.jkPop = 0;
+    setTimeout(() => {
+      if (ui.jkHold !== n) return;
+      ui.jkHold = 0; ui.jkPop = n;
+      if (S) render();
+      setTimeout(() => { if (ui.jkPop === n) ui.jkPop = 0; }, 900);
+    }, 1300);
+  }
+}
+function jSc(c) {
+  const j = S.jk, n = j.log.length, r = n && ui.jkHold === n ? j.log[n - 1] : null;
+  return j.sc[c] - (r && r[2] === c ? Math.floor(r[c - 1] / 3) + 1 : 0);
+}
 function jBoardHTML() {
   const j = S.jk, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L;
-  const canPick = !over && my && j.pick[my] < 0 && !ui.offline;
+  const hold = j.log.length > 0 && ui.jkHold === j.log.length, hl = hold ? j.log[j.log.length - 1] : null;
+  const canPick = !over && !hold && my && j.pick[my] < 0 && !ui.offline;
   if (!canPick || (ui.jkSel >= 0 && !j.hand[my][ui.jkSel])) ui.jkSel = -1;
   const pts = k => Math.floor(k / 3) + 1;
   const hand = (c, inter) => `<div class="jhand">${[0, 1, 2].map(p => `<div class="jgrp"><div class="jrow">${[0, 1, 2].map(t => {
-    const k = p * 3 + t, has = j.hand[c][k];
-    return inter ? `<button class="jcard${has ? '' : ' used'}${ui.jkSel === k ? ' sel' : ''}" data-act="jsel" data-k="${k}" ${has && canPick ? '' : 'disabled'} aria-label="${p + 1}点">${JE[t]}</button>`
-                 : `<i class="jcard${has ? '' : ' used'}">${JE[t]}</i>`;
+    const k = p * 3 + t, has = j.hand[c][k] || (hold && hl[c - 1] === k);
+    return inter ? `<button class="jcard${has ? '' : ' used'}${ui.jkSel === k ? ' sel' : ''}" data-act="jsel" data-k="${k}" ${has && canPick ? '' : 'disabled'} aria-label="${JN[t]} ${p + 1}点" title="${JN[t]}">${JE[t]}</button>`
+                 : `<i class="jcard${has ? '' : ' used'}" title="${JN[t]}">${JE[t]}</i>`;
   }).join('')}</div><small>${p + 1}点</small></div>`).join('')}</div>`;
-  const side = (c, inter) => `<div class="jside c${c}"><div class="jhead"><span>${esc(nameOf(c))}${!over && j.pick[c] >= 0 ? '<em>出しました</em>' : ''}</span><b>${j.sc[c]}点</b></div>${hand(c, inter)}</div>`;
+  const side = (c, inter) => `<div class="jside c${c}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && j.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>${jSc(c)}点</b></div>${hand(c, inter)}</div>`;
   const big = k => `<b class="jbig">${JE[k % 3]}<small>${pts(k)}点</small></b>`, last = j.log[j.log.length - 1];
-  const mid = last ? `<div class="jlast"><div class="c${R}">${big(last[R - 1])}</div><span>${last[2] ? esc(nameOf(last[2])) + ' +' + pts(last[last[2] - 1]) : 'あいこ'}</span><div class="c${L}">${big(last[L - 1])}</div></div>`
+  const mid = hold ? '<div class="jlast ready"><b>READY</b><span>出そろいました</span></div>' : last ? `<div class="jlast${ui.jkPop === j.log.length ? ' pop' : ''}"><div class="c${R}">${big(last[R - 1])}</div><span>${last[2] ? esc(nameOf(last[2])) + ' +' + pts(last[last[2] - 1]) : 'あいこ'}</span><div class="c${L}">${big(last[L - 1])}</div></div>`
                    : '<div class="jlast empty">両者が手を出すと、ここに結果が出ます</div>';
-  const log = j.log.length ? `<div class="jlog">${j.log.map((r, n) => `<span>${n + 1}回 ${JE[r[R - 1] % 3]}${pts(r[R - 1])} - ${JE[r[L - 1] % 3]}${pts(r[L - 1])}</span>`).join('')}</div>` : '';
+  const log = j.log.length ? `<div class="jlog">${(hold ? j.log.slice(0, -1) : j.log).map((r, n) => `<span>${n + 1}回 ${JE[r[R - 1] % 3]}${pts(r[R - 1])} - ${JE[r[L - 1] % 3]}${pts(r[L - 1])}</span>`).join('')}</div>` : '';
   return `<div class="jk">${side(R, false)}${mid}${side(L, !!my)}${log}</div>`;
 }
 function hMine() {
@@ -828,7 +897,7 @@ function hBoardHTML() {
     let rows = '';
     for (let k = 0; k < hb.max; k++) {
       const g = hb.g[c][k];
-      rows += `<tr class="${g && g.h === 3 ? 'hit' : ''}"><td>${g ? g.n.split('').join(' ') : k === hb.g[c].length && S.turn === c && !over ? '- - -' : ''}</td><td>${g ? g.h : ''}</td><td>${g ? g.b : ''}</td></tr>`;
+      rows += `<tr class="${g && g.h === 3 ? 'hit' : ''}${k === hb.g[c].length - 1 && (S.turn === 3 - c || (over && c === 2)) ? ' nw' : ''}"><td>${g ? g.n.split('').join(' ') : k === hb.g[c].length && S.turn === c && !over ? '- - -' : ''}</td><td>${g ? g.h : ''}</td><td>${g ? g.b : ''}</td></tr>`;
     }
     return `<table class="htab c${c}"><thead><tr><th>${title}</th><th>H</th><th>B</th></tr></thead><tbody>${rows}</tbody></table>`;
   };
@@ -898,6 +967,7 @@ function boardHTML() {
     if (S.line && S.line.includes(i)) cls.push('win');
     if (hints.has(i)) cls.push('hint');
     if (ban.has(i)) cls.push('ban');
+    if (ui.flip && ui.flip[i] && i !== S.last) cls.push('flip');
     const sel = myTurn && S.game === 'gomoku' && i === ui.sel;
     if (sel) cls.push('sel');
     const can = myTurn && !v && !ban.has(i) && (S.game === 'gomoku' || hints.has(i) || (land && land[i % n] >= 0));
@@ -907,6 +977,7 @@ function boardHTML() {
 }
 function msgHTML() {
   const my = colorOf(me.cid);
+  if (S.jk && ui.jkHold) return '<div class="msg">出そろいました…<small>READY</small></div>';
   if (S.phase === 'result') {
     const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
@@ -932,6 +1003,7 @@ function msgHTML() {
   return `<div class="msg">${t}${p}${g}</div>`;
 }
 function mainHTML() {
+  if (S.jk && S.phase !== 'lobby') jSync();
   const host = me.isHost, my = colorOf(me.cid);
   if (S.phase === 'lobby') {
     const ready = allSet(), modes = GAMES[S.game].modes;
@@ -948,7 +1020,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c} ${S.turn === c || S.winner === c ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${S.jk.sc[c]}点</b>` : ''}</div>`;
+  const pl = c => `<div class="pl c${c} ${S.turn === c || (S.winner === c && !(S.jk && ui.jkHold)) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -962,7 +1034,7 @@ function mainHTML() {
         <button data-act="nudge" data-d="1" aria-label="右へ">▶</button>
       </div>`;
     }
-    if (S.game === 'janken' && my && !ui.offline && S.jk.pick[my] < 0) {
+    if (S.game === 'janken' && my && !ui.offline && !ui.jkHold && S.jk.pick[my] < 0) {
       const k = ui.jkSel >= 0 && S.jk.hand[my][ui.jkSel] ? ui.jkSel : -1;
       pad = `<div class="pad"><button class="put" data-act="jput" ${k >= 0 ? '' : 'disabled'}>${k >= 0 ? JE[k % 3] + ' ' + (Math.floor(k / 3) + 1) + '点を出す' : '手を選んでください'}</button></div>`;
     }
@@ -1029,18 +1101,51 @@ function sideHTML() {
     <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
     <button class="btn mg" data-act="leave">${host ? 'ルームを解散する' : 'ルームから退出する'}</button></aside>`;
 }
+function fxTick() {
+  const key = (S.gno || 0) + ':' + (S.mv || 0) + ':' + S.phase;
+  ui.fx = ui.fxOn && ui.fxKey !== undefined && ui.fxKey !== key && S.phase !== 'lobby';
+  ui.fxKey = key;
+  const b = S.board || [];
+  ui.flip = ui.fx && S.game === 'reversi' && ui.pb && ui.pb.length === b.length ? b.map((v, i) => !!(v && ui.pb[i] && ui.pb[i] !== v)) : null;
+  ui.pb = b.slice();
+}
+function fxResult() {
+  if (!S) return;
+  const key = S.gno || 0;
+  if (ui.fxRes === undefined) { ui.fxRes = S.phase === 'result' ? key : -1; return; }
+  if (S.phase !== 'result' || ui.fxRes === key || (S.jk && ui.jkHold)) return;
+  ui.fxRes = key;
+  if (!ui.fxOn) return;
+  const my = colorOf(me.cid), w = S.winner, kind = !w ? 'draw' : !my ? 'spec' : w === my ? 'win' : 'lose';
+  const text = kind === 'draw' ? 'DRAW' : kind === 'win' ? 'YOU WIN' : kind === 'lose' ? 'YOU LOSE' : 'WINNER';
+  const sub = kind === 'draw' ? '引き分け' : kind === 'win' ? 'VICTORY' : nameOf(w) + ' の勝ち';
+  const o = document.createElement('div');
+  o.className = 'fxov ' + kind + (kind === 'spec' ? ' c' + w : '');
+  let h = `<div class="fxbar"></div><div class="fxtxt" data-t="${text}">${text}</div><div class="fxsub">${esc(sub)}</div>`;
+  if (kind === 'win' || kind === 'spec') {
+    for (let k = 0; k < 30; k++) {
+      const a = Math.random() * 6.283, d = 28 + Math.random() * 46;
+      h += `<i class="fxp" style="--x:${(Math.cos(a) * d).toFixed(1)}vmin;--y:${(Math.sin(a) * d).toFixed(1)}vmin;--d:${(Math.random() * .25).toFixed(2)}s;--s:${(3 + Math.random() * 7).toFixed(0)}px"></i>`;
+    }
+  }
+  o.innerHTML = h;
+  document.body.appendChild(o);
+  setTimeout(() => o.remove(), 2700);
+}
 function roomHTML() {
+  fxTick();
   return `<header class="top"><h1 class="logo">CYBER<span>BOARD</span></h1>
+      <button class="fxtog${ui.fxOn ? ' on' : ''}" data-act="fxtog" aria-pressed="${ui.fxOn}">FX ${ui.fxOn ? 'ON' : 'OFF'}</button>
       <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
     ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
     ${S.note && S.phase === 'lobby' ? `<div class="offline">${esc(S.note)}</div>` : ''}
-    <div class="layout">${mainHTML()}${sideHTML()}</div>`;
+    <div class="layout${ui.fx ? ' fx' : ''}">${mainHTML()}${sideHTML()}</div>`;
 }
 function render() {
   const app = $('#app');
   if (ui.screen === 'entry') app.innerHTML = entryHTML();
   else if (ui.screen === 'connecting' || !S) app.innerHTML = `<div class="wait">${esc(ui.status)}</div>`;
-  else app.innerHTML = roomHTML();
+  else { app.innerHTML = roomHTML(); fxResult(); }
 }
 
 // ---------- events ----------
@@ -1065,6 +1170,7 @@ document.addEventListener('click', e => {
     if (S.game === 'gomoku' && ui.sel !== i) { ui.sel = i; render(); }
     else { ui.sel = -1; act({ t: 'move', i }); }
   }
+  else if (a === 'fxtog') { ui.fxOn = !ui.fxOn; store.set('cb_fx', ui.fxOn ? '1' : '0'); render(); }
   else if (a === 'stat') { ui.statOpen = ui.statOpen === el.dataset.n ? null : el.dataset.n; render(); }
   else if (a === 'leave') { if (confirm(host ? 'ルームを解散しますか？ 全員が退出になります。' : 'ルームから退出しますか？')) leaveRoom(); }
   else if (a === 'jsel') { const k = Number(el.dataset.k); ui.jkSel = ui.jkSel === k ? -1 : k; render(); }
