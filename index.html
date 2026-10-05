@@ -455,7 +455,7 @@ function drops(b) {
 }
 function dInit(kind, np) {
   const n = kind === 'ci' ? 8 : 7;
-  return { n, kind, own: new Array(n * n).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), claim: null };
+  return { n, kind, own: new Array(n * n).fill(0), last: -1, by: 0, open: false, alive: [0].concat(new Array(np).fill(1)), pend: new Array(np + 1).fill(0), claim: null };
 }
 function dShape(kind, n, P) {
   const q = P.map(i => [i % n, Math.floor(i / n)]);
@@ -476,20 +476,30 @@ function dApply(s, i, c) {
   if (s.phase !== 'playing' || !d || !c || !d.alive[c] || !Number.isInteger(i)) return false;
   if (i >= 50000 && i < 50000 + d.n * d.n) {
     const k = i - 50000;
-    if (s.turn !== c || d.own[k]) return false;
-    d.own[k] = c; d.last = k; d.by = c; d.open = true; d.claim = null; s.last = k;
+    if (s.turn !== c || d.own[k] || d.pend.some(v => v)) return false;
+    d.own[k] = c; d.last = k; d.by = c; d.claim = null; s.last = k;
+    const cnt = d.own.filter(v => v).length;
+    d.pend = d.alive.map((a, p) => (p && a && p !== c && cnt >= 4 ? 1 : 0));
+    d.open = d.pend.some(v => v);
     if (d.own.every(v => v)) { finish(s, 0, 'full'); return true; }
     s.turn = dNext(d, c, np);
     return true;
   }
+  if (i === 70000) {
+    if (!d.pend[c]) return false;
+    d.pend[c] = 0; d.open = d.pend.some(v => v);
+    return true;
+  }
   if (i >= 60000000 && i < 61000000) {
-    if (!d.open || c === d.by) return false;
+    if (!d.pend[c]) return false;
     const v = i - 60000000, P = [Math.floor(v / 10000), Math.floor(v / 100) % 100, v % 100];
     if (new Set(P).size !== 3 || P.some(k => k >= d.n * d.n || !d.own[k] || k === d.last)) return false;
     const pts = [d.last].concat(P), ok = dShape(d.kind, d.n, pts);
     d.claim = { by: c, on: d.by, pts, ok };
     d.alive[ok ? d.by : c] = 0;
-    if (ok) d.open = false;
+    d.pend[c] = 0;
+    if (ok) d.pend = d.pend.map(() => 0);
+    d.open = d.pend.some(v => v);
     const left = [];
     for (let k = 1; k <= np; k++) if (d.alive[k]) left.push(k);
     if (left.length === 1) { s.line = ok ? pts : null; finish(s, left[0], ok ? 'shape' : 'miss'); return true; }
@@ -1022,10 +1032,11 @@ function dShapeSVG(d) {
   const ux = (A * (b[1] - c[1]) + B * (c[1] - a[1]) + C * (a[1] - b[1])) / D, uy = (A * (c[0] - b[0]) + B * (a[0] - c[0]) + C * (b[0] - a[0])) / D;
   return `<svg class="dsvg" viewBox="0 0 ${n} ${n}"><circle cx="${ux.toFixed(3)}" cy="${uy.toFixed(3)}" r="${Math.sqrt((a[0] - ux) * (a[0] - ux) + (a[1] - uy) * (a[1] - uy)).toFixed(3)}"/></svg>`;
 }
+function dWait() { return !!(S.dt && S.dt.pend && S.dt.pend.some(v => v)); }
 function dBoardHTML() {
   const d = S.dt, n = d.n, my = colorOf(me.cid), over = S.phase === 'result';
-  const meAlive = my && d.alive[my], myTurn = !over && meAlive && S.turn === my && !ui.offline;
-  const canClaim = !over && meAlive && d.open && d.by !== my && !ui.offline;
+  const meAlive = my && d.alive[my], myTurn = !over && meAlive && S.turn === my && !dWait() && !ui.offline;
+  const canClaim = !over && meAlive && d.pend && d.pend[my] && !ui.offline;
   if (!canClaim) ui.dClaim = null;
   if (!myTurn || ui.dClaim || (ui.dSel >= 0 && d.own[ui.dSel])) ui.dSel = -1;
   const cl = ui.dClaim, shown = d.claim && d.claim.ok ? d.claim.pts : [], k = d.claim;
@@ -1240,6 +1251,10 @@ function msgHTML() {
     const sub = chase ? `${esc(nameOf(1))} が3ヒット！ ${esc(nameOf(2))} もこのターンで当てれば引き分け` : S.turn ? `ターン ${Math.min(hb.g[2].length + 1, hb.max)} / ${hb.max}` : '3桁・同じ数字は使えません';
     return `<div class="msg">${m}<small>${sub}</small></div>`;
   }
+  if (dWait()) {
+    const d = S.dt, names = d.pend.map((v, k) => (v ? esc(nameOf(k)) : '')).filter(Boolean).join('、');
+    return `<div class="msg">${d.pend[my] ? '通告しますか？' : '判定待ち'}<small>${d.pend[my] ? esc(nameOf(d.by)) + ' が打ったドットで形ができていれば通告' : names + ' が選択中'}</small></div>`;
+  }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
@@ -1285,7 +1300,8 @@ function mainHTML() {
       const d = S.dt, cl = ui.dClaim;
       if (cl) pad = `<div class="pad"><button class="wide" data-act="dcancel">やめる</button><button class="put" data-act="djudge" ${cl.length === 3 ? '' : 'disabled'}>${cl.length === 3 ? 'この4点で判定' : 'あと' + (3 - cl.length) + '点選ぶ'}</button></div>
         <p class="note dwarn">最後に打たれたドット（選択済み）と、ほかの3点を選びます。外すとあなたが失格です。</p>`;
-      else pad = `<div class="pad">${S.turn === my ? `<button class="put" data-act="dput" ${ui.dSel >= 0 ? '' : 'disabled'}>ここに打つ</button>` : ''}${d.open && d.by !== my ? '<button class="wide dclaim" data-act="dclaim">通告する</button>' : ''}</div>`;
+      else if (d.pend && d.pend[my]) pad = '<div class="pad"><button class="wide" data-act="dpass">通告なし</button><button class="wide dclaim" data-act="dclaim">通告する</button></div>';
+      else if (S.turn === my && !dWait()) pad = `<div class="pad"><button class="put" data-act="dput" ${ui.dSel >= 0 ? '' : 'disabled'}>ここに打つ</button></div>`;
     }
     if (S.game === 'charge' && my && !ui.offline && !ui.jkHold && S.ca.pick[my] < 0) {
       const k = ui.caSel >= 0 && S.ca.en[my] >= CAC[ui.caSel] ? ui.caSel : -1;
@@ -1464,6 +1480,7 @@ document.addEventListener('click', e => {
     render();
   }
   else if (a === 'dput') { const i = ui.dSel; if (i >= 0) { ui.dSel = -1; act({ t: 'move', i: 50000 + i }); render(); } }
+  else if (a === 'dpass') { act({ t: 'move', i: 70000 }); render(); }
   else if (a === 'dclaim') { ui.dClaim = []; ui.dSel = -1; render(); }
   else if (a === 'dcancel') { ui.dClaim = null; render(); }
   else if (a === 'djudge') { const cl = ui.dClaim; if (cl && cl.length === 3) { ui.dClaim = null; act({ t: 'move', i: 60000000 + cl[0] * 10000 + cl[1] * 100 + cl[2] }); render(); } }
