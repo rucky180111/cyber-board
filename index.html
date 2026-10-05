@@ -930,13 +930,15 @@ function createRoom(bi) {
       opened = true;
       if (rehost) { try { S = JSON.parse(store.get('cb_state', true)); } catch (e) { S = null; } }
       if (!S || !S.members) hostInit();
+      if (!GAMES[S.game]) { S.game = 'reversi'; S.phase = 'lobby'; S.np = 2; }
       S.members.forEach(m => { seen[m.cid] = Date.now(); });
       store.set('cb_host', me.code, true);
       history.replaceState(null, '', '?room=' + me.code);
       ui.screen = 'room';
       sweepTimer = setInterval(sweep, 5000);
     }
-    ui.offline = false; broadcast();
+    ui.offline = false;
+    try { broadcast(); } catch (e) { S.phase = 'lobby'; S.game = 'reversi'; S.np = 2; S.note = '前回の対局は復元できなかったため、ゲーム選択に戻りました。'; broadcast(); }
   });
   c.on('message', (tp, buf) => { let m; try { m = JSON.parse(buf.toString()); } catch (e) { return; } onUp(m); });
   c.on('close', () => { if (opened && net === c) { ui.offline = true; render(); } });
