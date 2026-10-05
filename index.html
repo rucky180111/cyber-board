@@ -201,6 +201,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .win .stone{animation:pulse .8s infinite alternate}
 @keyframes pulse{to{box-shadow:0 0 20px 4px var(--yl);transform:scale(1.08)}}
 .cell,.pad button{touch-action:manipulation}
+.gomoku .ban::after{content:"×";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#ff3344;font-size:min(3.4vw,18px);line-height:1;opacity:.85}
 .cell.sel{background-color:rgba(246,255,0,.25);outline:2px solid var(--yl);outline-offset:-1px;z-index:1}
 .ghost{opacity:.6}
 .pad{display:flex;gap:8px;justify-content:center;margin-top:12px}
@@ -242,7 +243,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 //<LOGIC>
 const GAMES = {
   reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
-  gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。' },
+  gomoku:  { name: '五目並べ', size: 15, desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。先手は三三・四四・長連が禁じ手。' },
   connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' },
   quoridor: { name: 'ムーブ＆ウォール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' },
   gobblet: { name: '被せ3目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
@@ -421,6 +422,59 @@ function qApply(s, i, c) {
   s.turn = t;
   return true;
 }
+const RD = [[1,0],[0,1],[1,1],[1,-1]];
+function rAt(b, x, y) { return x < 0 || x > 14 || y < 0 || y > 14 ? -1 : b[y * 15 + x]; }
+function rLen(b, x, y, dx, dy) {
+  let k = 1;
+  for (const s of [1, -1]) { let cx = x + dx * s, cy = y + dy * s; while (rAt(b, cx, cy) === 1) { k++; cx += dx * s; cy += dy * s; } }
+  return k;
+}
+function rComp(b, x, y, dx, dy) {
+  const P = [];
+  for (let t = -4; t <= 4; t++) {
+    if (!t) continue;
+    const px = x + t * dx, py = y + t * dy;
+    if (rAt(b, px, py) !== 0) continue;
+    b[py * 15 + px] = 1;
+    if (rLen(b, x, y, dx, dy) === 5) P.push(t);
+    b[py * 15 + px] = 0;
+  }
+  return P;
+}
+function rFours(b, x, y, dx, dy) {
+  const n = rComp(b, x, y, dx, dy).length;
+  return n < 2 ? n : rLen(b, x, y, dx, dy) === 4 ? 1 : 2;
+}
+function rThree(b, x, y, dx, dy, depth) {
+  if (rFours(b, x, y, dx, dy)) return false;
+  for (let t = -3; t <= 3; t++) {
+    if (!t) continue;
+    const px = x + t * dx, py = y + t * dy;
+    if (rAt(b, px, py) !== 0) continue;
+    b[py * 15 + px] = 1;
+    const open = rLen(b, x, y, dx, dy) === 4 && rComp(b, x, y, dx, dy).length === 2;
+    b[py * 15 + px] = 0;
+    if (open && !(depth < 2 && rForbidden(b, px, py, depth + 1))) return true;
+  }
+  return false;
+}
+function rForbidden(b, x, y, depth) {
+  const i = y * 15 + x;
+  if (b[i]) return false;
+  b[i] = 1;
+  let r = false;
+  if (!RD.some(d => rLen(b, x, y, d[0], d[1]) === 5)) {
+    if (RD.some(d => rLen(b, x, y, d[0], d[1]) >= 6)) r = true;
+    else {
+      let f = 0, th = 0;
+      for (const d of RD) f += rFours(b, x, y, d[0], d[1]);
+      if (f >= 2) r = true;
+      else { for (const d of RD) if (rThree(b, x, y, d[0], d[1], depth || 0)) th++; r = th >= 2; }
+    }
+  }
+  b[i] = 0;
+  return r;
+}
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
 function applyMove(s, i, c) {
   if (s.game === 'hitblow') return hApply(s, i, c);
@@ -447,6 +501,7 @@ function applyMove(s, i, c) {
     else if (legal(s.board, c).length) { s.passed = o; s.turn = c; }
     else { const a = count(s.board, 1), d = count(s.board, 2); finish(s, a > d ? 1 : d > a ? 2 : 0, 'count'); }
   } else {
+    if (c === 1 && rForbidden(s.board, x, y, 0)) return false;
     s.board[i] = c; s.last = i;
     const l = fiveAt(s.board, x, y, c);
     if (l) { s.line = l; finish(s, c, 'five'); }
@@ -743,15 +798,17 @@ function boardHTML() {
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
   const land = S.game === 'connect4' ? drops(S.board) : null;
   const hints = new Set(!myTurn ? [] : land ? land.filter(i => i >= 0) : S.game === 'reversi' ? legal(S.board, my) : []);
+  const ban = new Set(S.game === 'gomoku' && S.phase === 'playing' && S.turn === 1 ? S.board.map((v, i) => !v && rForbidden(S.board, i % 15, Math.floor(i / 15), 0) ? i : -1).filter(i => i >= 0) : []);
   let h = `<div class="board ${S.game}" style="--n:${n}${land ? ';aspect-ratio:7/6' : ''}">`;
   S.board.forEach((v, i) => {
     const cls = ['cell'];
     if (i === S.last) cls.push('last');
     if (S.line && S.line.includes(i)) cls.push('win');
     if (hints.has(i)) cls.push('hint');
+    if (ban.has(i)) cls.push('ban');
     const sel = myTurn && S.game === 'gomoku' && i === ui.sel;
     if (sel) cls.push('sel');
-    const can = myTurn && !v && (S.game === 'gomoku' || hints.has(i) || (land && land[i % n] >= 0));
+    const can = myTurn && !v && !ban.has(i) && (S.game === 'gomoku' || hints.has(i) || (land && land[i % n] >= 0));
     h += `<button class="${cls.join(' ')}" data-act="move" data-i="${land ? land[i % n] : i}" ${can ? '' : 'disabled'} aria-label="${i % n + 1},${Math.floor(i / n) + 1}">${v ? `<i class="stone s${v}"></i>` : sel ? `<i class="stone s${my} ghost"></i>` : ''}</button>`;
   });
   return h + '</div>';
@@ -772,7 +829,7 @@ function msgHTML() {
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
-  const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定（矢印で微調整できます）</small>'
+  const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定' + (my === 1 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -800,7 +857,7 @@ function mainHTML() {
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
       if (ui.sel >= S.board.length) ui.sel = -1;
-      const ok = ui.sel >= 0 && !S.board[ui.sel];
+      const ok = ui.sel >= 0 && !S.board[ui.sel] && !(my === 1 && rForbidden(S.board, ui.sel % 15, Math.floor(ui.sel / 15), 0));
       pad = `<div class="pad">
         <button data-act="nudge" data-d="3" aria-label="左へ">◀</button>
         <button data-act="nudge" data-d="0" aria-label="上へ">▲</button>
