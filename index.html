@@ -240,6 +240,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .statby span{color:var(--tx)}
 .statby b{color:var(--yl);margin-left:4px}
 .statctl{margin-top:10px;text-align:right}
+.stat u,.statby u{text-decoration:none;color:var(--cy);font-weight:700;margin-left:8px}
 .tag{display:inline-block;font-family:var(--disp);font-size:9px;letter-spacing:.12em;line-height:1.2;border:1px solid var(--dim);color:var(--dim);background:transparent;padding:3px 6px;margin-left:6px;vertical-align:middle}
 .tag.kick{border-color:var(--mg);color:var(--mg);cursor:pointer}
 .tag.kick:hover{background:rgba(255,43,214,.15)}
@@ -598,7 +599,9 @@ function recordStats() {
     const m = memberOf('p' + k); if (!m) continue;
     const e = st[m.name] = st[m.name] || { t: [0, 0, 0, 0], by: {} };
     const b = e.by[S.game] = e.by[S.game] || [0, 0, 0, 0];
-    const r = !S.winner ? 3 : S.winner === k ? 1 : 2;
+    const r = !S.winner ? 3 : S.winner === k ? 1 : 2, pt = r === 1 ? NP() - 1 : r === 2 ? -1 : 0;
+    e.t[4] = (e.t[4] === undefined ? e.t[1] - e.t[2] : e.t[4]) + pt;
+    b[4] = (b[4] === undefined ? b[1] - b[2] : b[4]) + pt;
     e.t[0]++; e.t[r]++; b[0]++; b[r]++;
   }
 }
@@ -624,10 +627,19 @@ function onUp(m) {
   if ((S.kicked || []).includes(cid)) return;
   if (m.t === 'hello' || m.t === 'ping') {
     seen[cid] = Date.now();
-    const name = String(m.name || 'GUEST').slice(0, 12);
+    const name = String(m.name || 'GUEST').trim().slice(0, 12) || 'GUEST', low = name.toLowerCase();
     const mem = S.members.find(x => x.cid === cid);
-    if (!mem) { S.members.push({ cid, name, role: 'spec', online: true }); broadcast(); }
-    else if (!mem.online || mem.name !== name || m.t === 'hello') { mem.online = true; mem.name = name; broadcast(); }
+    const twin = S.members.find(x => x.cid !== cid && x.name.toLowerCase() === low);
+    const undup = () => { S.dup = (S.dup || []).filter(d => d.c !== cid); };
+    if (!mem && twin && !twin.online && !twin.host) { delete seen[twin.cid]; twin.cid = cid; twin.online = true; undup(); broadcast(); }
+    else if (!mem && twin) {
+      delete seen[cid];
+      const had = (S.dup || []).some(d => d.c === cid && d.n === low);
+      if (!had) { undup(); S.dup = S.dup.concat({ c: cid, n: low }).slice(-20); }
+      if (!had || m.t === 'hello') broadcast();
+    }
+    else if (!mem) { undup(); S.members.push({ cid, name, role: 'spec', online: true }); broadcast(); }
+    else if (!mem.online || m.t === 'hello' || (mem.name !== name && !twin)) { mem.online = true; if (!twin) mem.name = name; broadcast(); }
   }
   else if (m.t === 'bye') drop(cid);
   else if (m.t === 'leave') removeMember(cid, false);
@@ -689,6 +701,7 @@ function joinRoom() {
     if (m.t === 'ended') { exitRoom('ホストがルームを解散しました。'); return; }
     if (m.t === 'closed') { if (gotState) { ui.offline = true; render(); } return; }
     if (m.t !== 'state' || !m.s || !Array.isArray(m.s.members)) return;
+    if (!gotState && (m.s.dup || []).some(d => d.c === me.cid && d.n === me.name.toLowerCase())) { fail('同じ名前のメンバーがすでにいます。別の名前で入り直してください。'); return; }
     if ((m.s.kicked || []).includes(me.cid)) { exitRoom('ホストにKICKされました。'); return; }
     if (!m.s.members.some(x => x.cid === me.cid)) { if (gotState) up({ t: 'hello' }); return; }
     S = m.s; gotState = true; ui.screen = 'room'; ui.offline = false;
@@ -926,7 +939,8 @@ function mainHTML() {
 function statHTML(m) {
   const e = (S.stats || {})[m.name];
   if (!e) return '<div class="stat none">0戦</div>';
-  const f = a => `${a[0]}戦 ${a[1]}勝 ${a[2]}敗 ${a[3]}分<b>${a[0] ? Math.round(a[1] / a[0] * 100) : 0}%</b>`, open = ui.statOpen === m.name;
+  const sc = a => { const v = (a[4] === undefined ? a[1] - a[2] : a[4]) / (a[0] + 2) * 10; return (v > 0 ? '+' : '') + v.toFixed(1); };
+  const f = a => `${a[0]}戦 ${a[1]}勝 ${a[2]}敗 ${a[3]}分<b>${a[0] ? Math.round(a[1] / a[0] * 100) : 0}%</b><u>${sc(a)}pt</u>`, open = ui.statOpen === m.name;
   return `<button class="stat" data-act="stat" data-n="${esc(m.name)}" aria-expanded="${open}">${f(e.t)}<i>${open ? '▲' : '▼'}</i></button>` +
     (open ? `<div class="statby">${Object.keys(e.by).map(g => `<div><span>${GAMES[g] ? GAMES[g].name : esc(g)}</span><em>${f(e.by[g])}</em></div>`).join('')}</div>` : '');
 }
