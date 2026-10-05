@@ -142,6 +142,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .gcell.last .gp{outline:2px solid var(--yl);outline-offset:2px}
 .gcell.win .gp{animation:pulse .8s infinite alternate}
 .gp{border-radius:50%;display:block}
+.trail{opacity:.3}
 .gr{position:absolute;border-radius:50%;border:1px dashed rgba(215,246,255,.28);pointer-events:none}
 .gcell .gp{position:absolute}
 .gcell .z1{inset:34%}
@@ -348,12 +349,12 @@ function qApply(s, i, c) {
   if (!q || !Number.isInteger(i) || i < 0) return false;
   if (i < 81) {
     if (!qMoves(q, c).includes(i)) return false;
-    q.pos[c] = i; s.last = i; s.lastWall = '';
+    q.from = q.pos[c]; q.who = c; q.pos[c] = i; s.last = i; s.lastWall = '';
     if (qGoal(np, c, i)) { finish(s, c, 'goal'); return true; }
   } else {
     const o = i < 200 ? 'h' : 'v', a = i - (o === 'h' ? 100 : 200);
     if (a < 0 || a > 63 || q.walls[c] <= 0 || !qWallOk(q, np, o, a)) return false;
-    (o === 'h' ? q.hw : q.vw)[a] = c; q.walls[c]--; s.lastWall = o + a; s.last = -1;
+    (o === 'h' ? q.hw : q.vw)[a] = c; q.walls[c]--; q.from = -1; s.lastWall = o + a; s.last = -1;
   }
   let t = c % np + 1;
   for (let k = 0; k < np && !q.walls[t] && !qMoves(q, t).length; k++) t = t % np + 1;
@@ -598,7 +599,7 @@ function qBoardHTML() {
   for (let c = 1; c <= np; c++) h += `<i class="qgoal ${sides[c]} c${c}"></i>`;
   for (let i = 0; i < 81; i++) {
     const x = i % 9, y = (i - x) / 9, c = q.pos.indexOf(i);
-    h += `<button class="qcell${mv.has(i) ? ' hint' : ''}${i === S.last ? ' last' : ''}" style="left:${f(x * P)};top:${f(y * P)}" data-act="move" data-i="${i}" ${mv.has(i) ? '' : 'disabled'} aria-label="${x + 1},${y + 1}">${c > 0 ? `<i class="stone s${c}"></i>` : ''}</button>`;
+    h += `<button class="qcell${mv.has(i) ? ' hint' : ''}${i === S.last ? ' last' : ''}" style="left:${f(x * P)};top:${f(y * P)}" data-act="move" data-i="${i}" ${mv.has(i) ? '' : 'disabled'} aria-label="${x + 1},${y + 1}">${c > 0 ? `<i class="stone s${c}"></i>` : i === q.from ? `<i class="stone s${q.who} trail"></i>` : ''}</button>`;
   }
   const wall = (o, a, cls) => {
     const wx = a % 8, wy = (a - wx) / 8;
