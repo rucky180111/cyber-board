@@ -548,7 +548,7 @@ const GAMES = {
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
-const GORDER = ['reversi', 'gobblet', 'connect4', 'gomoku', 'quoridor', 'dots', 'hitblow', 'janken', 'charge'];
+const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
