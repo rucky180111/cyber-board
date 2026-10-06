@@ -172,8 +172,18 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .vs.four{grid-template-columns:1fr 1fr}
 .modes{display:flex;gap:10px;margin-top:12px}
 .modes button{flex:1;background:#03050d;border:1px solid var(--line);color:var(--dim);padding:10px;font-family:inherit;font-weight:700;cursor:pointer}
-.modes.first{flex-wrap:wrap}
-.modes.first button{min-width:28%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pickbg{position:fixed;inset:0;z-index:60;background:rgba(3,5,13,.82);display:flex;align-items:center;justify-content:center;padding:16px}
+.pick{width:min(100%,380px);background:#070b18;border:1px solid var(--cy);box-shadow:0 0 30px rgba(0,240,255,.35);padding:18px}
+.pick h3{margin:0 0 4px;font-family:var(--disp);font-size:14px;letter-spacing:.2em;color:var(--cy)}
+.pick p{margin:0 0 12px;font-size:13px;color:var(--dim)}
+.pick button{display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;padding:13px 12px;background:#03050d;border:1px solid var(--line);color:var(--tx);font-family:inherit;font-weight:700;font-size:15px;cursor:pointer;text-align:left;touch-action:manipulation}
+.pick button small{font-family:var(--disp);font-size:11px;color:var(--cy);flex:none}
+.pick button span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick button.rnd{border-color:var(--yl);color:var(--yl)}
+.pick button.x{justify-content:center;color:var(--dim);font-weight:400;font-size:13px;padding:9px}
+.fxov.start{animation-duration:1.9s}
+.fxov.start .fxtxt{font-size:clamp(28px,9.5vw,84px)}
+.fxov.start .fxsub{order:-1;margin:0 0 12px;letter-spacing:.12em;font-family:inherit;font-weight:700;font-size:clamp(17px,5.5vw,30px);max-width:92vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .modes button.on{border-color:var(--cy);color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.35)}
 .modes button:disabled{cursor:default}
 .vs>span{font-family:var(--disp);font-weight:900;color:var(--dim)}
@@ -841,16 +851,27 @@ function unseat() {
 }
 function noFirst() { return S.game === 'janken' || S.game === 'charge'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
-function firstHTML(host) {
-  if (noFirst()) return '';
-  const n = NP(), f = S.first >= 1 && S.first <= n ? S.first : 'r';
-  return `<div class="modes first">${Array.from({ length: n }, (_, k) => { const m = seatMember(k + 1); return `<button class="${f === k + 1 ? 'on' : ''}" data-act="first" data-f="${k + 1}" ${host ? '' : 'disabled'}>${m ? esc(m.name) : (k + 1) + 'P'} 先手</button>`; }).join('')}<button class="${f === 'r' ? 'on' : ''}" data-act="first" data-f="r" ${host ? '' : 'disabled'}>ランダム</button></div>`;
+function pickHTML() {
+  if (!ui.pick || !me.isHost || !S || S.phase === 'playing' || noFirst() || !allSet()) { ui.pick = false; return ''; }
+  return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">キャンセル</button></div></div>`;
 }
-function startGame() {
+function fxStart() {
+  if (!S) return;
+  const key = S.gno || 0;
+  if (S.phase !== 'playing' || (S.mv || 0) > 0) { ui.fxSt = key; return; }
+  if (ui.fxSt === key) return;
+  ui.fxSt = key;
+  const o = document.createElement('div'), nf = noFirst();
+  o.className = 'fxov start' + (nf ? ' draw' : ' c1');
+  o.innerHTML = `<div class="fxbar"></div><div class="fxtxt" data-t="GAME START">GAME START</div><div class="fxsub">${nf ? esc(GAMES[S.game].name) : esc(nameOf(1)) + ' 先手'}</div>`;
+  document.body.appendChild(o);
+  setTimeout(() => o.remove(), 2000);
+}
+function startGame(first) {
   unseat();
   if (!allSet()) return;
   if (!noFirst()) {
-    const n = NP(), f = S.first >= 1 && S.first <= n ? S.first : 1 + Math.floor(Math.random() * n);
+    const n = NP(), f = first >= 1 && first <= n ? first : 1 + Math.floor(Math.random() * n);
     S.members.forEach(m => { const k = colorOf(m.cid); if (k) { m.seat = k; m.role = 'p' + ((k - f + n) % n + 1); } });
   }
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
@@ -1300,7 +1321,7 @@ function mainHTML() {
       <p class="note">${host ? `メンバー一覧で対戦する${NP()}人を選んでください。それ以外の人は観戦になります。` : 'ホストがゲームと対戦者を選んでいます…'}</p>
       ${NP() === 2 ? `<div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>`
                    : `<div class="vs four">${Array.from({ length: NP() }, (_, k) => slotHTML('p' + (k + 1))).join('')}</div>`}
-      ${noFirst() ? '' : `<h2>03 // FIRST MOVE</h2>${firstHTML(host)}`}
+
       ${host ? `<button class="btn primary big" data-act="start" ${ready ? '' : 'disabled'}>GAME START</button>` : ''}
     </section>`;
   }
@@ -1363,7 +1384,6 @@ function mainHTML() {
   } else if (host) {
     btn += `<button class="btn sm primary" data-act="lobby">次のゲームを選ぶ</button>
             <button class="btn sm" data-act="start">再戦する</button>`;
-    pad += firstHTML(true);
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
@@ -1467,7 +1487,7 @@ function render() {
   const app = $('#app');
   if (ui.screen === 'entry') app.innerHTML = entryHTML();
   else if (ui.screen === 'connecting' || !S) app.innerHTML = `<div class="wait">${esc(ui.status)}</div>`;
-  else { app.innerHTML = roomHTML(); fxResult(); }
+  else { app.innerHTML = roomHTML() + pickHTML(); fxResult(); fxStart(); }
 }
 
 // ---------- events ----------
@@ -1550,8 +1570,10 @@ document.addEventListener('click', e => {
     const m = S.members.find(x => x.cid === el.dataset.cid);
     if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
   }
-  else if (a === 'start') startGame();
-  else if (a === 'first') { if (!me.isHost) return; S.first = el.dataset.f === 'r' ? 'r' : Number(el.dataset.f); broadcast(); }
+  else if (a === 'start') { if (!me.isHost || !allSet()) return; if (noFirst()) startGame(); else { ui.pick = true; render(); } }
+  else if (a === 'pick') { if (!me.isHost) return; ui.pick = false; startGame(Number(el.dataset.f)); render(); }
+  else if (a === 'pickx') { ui.pick = false; render(); }
+
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
 });
 document.addEventListener('keydown', e => {
