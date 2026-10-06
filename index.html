@@ -67,7 +67,9 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .wait{text-align:center;margin-top:30vh;font-family:var(--disp);letter-spacing:.2em;color:var(--cy);animation:blink 1.2s infinite}
 @keyframes blink{50%{opacity:.35}}
 
-.top{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:16px}
+.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.top .fxtog{order:3;flex:none;white-space:nowrap}
+.top .room{white-space:nowrap}
 .top .logo{font-size:20px;margin-right:auto}
 .room{font-family:var(--disp);font-size:12px;letter-spacing:.15em;color:var(--dim)}
 .room b{color:var(--yl);font-size:18px;letter-spacing:.3em;margin-left:6px;text-shadow:0 0 10px rgba(246,255,0,.6)}
@@ -77,7 +79,7 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 @media(max-width:820px){.layout{grid-template-columns:minmax(0,1fr)}}
 .layout>*{min-width:0}
 
-.games{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:12px}
+.games{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:1fr;gap:10px}
 .connect4{padding:1.5%;background:#070d24}
 .connect4 .cell::before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid rgba(0,240,255,.3);background:#02030a}
 .connect4 .stone{inset:8%;z-index:1}
@@ -254,9 +256,13 @@ button:not(:disabled):active{transform:scale(.95)}
 @media(prefers-reduced-motion:reduce){.fx *{animation:none!important}.fxov{display:none}}
 .connect4 .win .stone{animation:pulse .8s infinite alternate}
 @keyframes drop{0%{transform:translateY(-420%);opacity:.3}55%{transform:translateY(0);opacity:1;animation-timing-function:ease-out}70%{transform:translateY(-22%) scaleY(1.04);animation-timing-function:ease-in}84%{transform:translateY(0) scaleY(.92)}92%{transform:translateY(-6%)}100%{transform:none}}
-.game{background:#03050d;border:1px solid var(--line);color:var(--tx);padding:16px 12px;cursor:pointer;text-align:left;font-family:inherit;transition:.15s}
-.game b{display:block;font-size:17px;margin-bottom:6px}
-.game small{color:var(--dim);font-size:12px;line-height:1.5;display:block}
+.game{background:#03050d;border:1px solid var(--line);color:var(--tx);padding:12px;min-height:84px;cursor:pointer;text-align:left;font-family:inherit;transition:.15s;display:flex;flex-direction:column;justify-content:space-between;gap:8px}
+.game b{display:block;font-size:16px;line-height:1.3;word-break:keep-all}
+.game small{color:var(--dim);font-family:var(--disp);font-size:10px;letter-spacing:.14em;display:block}
+.game.on small{color:var(--cy)}
+.ginfo{margin-top:12px;padding:12px 14px;border-left:2px solid var(--cy);background:rgba(0,240,255,.05)}
+.ginfo b{display:block;color:var(--cy);font-size:15px;margin-bottom:4px}
+.ginfo p{margin:0;color:var(--dim);font-size:13px;line-height:1.65}
 .game.on{border-color:var(--cy);box-shadow:0 0 18px rgba(0,240,255,.4),inset 0 0 18px rgba(0,240,255,.12)}
 .game.on b{color:var(--cy)}
 .game:disabled{cursor:default}
@@ -490,7 +496,7 @@ button.jcard:disabled{cursor:default}
 .pad .wide{flex:1;font-size:14px;font-weight:700;padding:0 6px}
 .pad .wide.on{background:rgba(0,240,255,.16);border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.35)}
 .pad button:disabled{opacity:.35;cursor:not-allowed}
-@media(max-width:520px){#app{padding:8px}.panel{padding:14px 8px}}
+@media(max-width:520px){#app{padding:8px}.panel{padding:14px 8px}.games{gap:8px}.game{padding:10px 8px;min-height:74px}.game b{font-size:12.5px}.top{gap:8px}.top .logo{font-size:16px}.room{font-size:0}.room b{font-size:15px;letter-spacing:.2em;margin:0}}
 .actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px}
 
 .members{list-style:none;margin:0;padding:0}
@@ -532,15 +538,15 @@ button.jcard:disabled{cursor:default}
 <script>
 //<LOGIC>
 const GAMES = {
-  reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方が勝ち。' },
-  gomoku:  { name: '五目並べ', size: 15, modes: [2, 3], desc: '15×15。縦・横・斜めに5つ並べた方が勝ち。2人戦の先手は三三・四四・長連が禁じ手。2人／3人。' },
-  connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落として、縦・横・斜めに4つ並べた方が勝ち。' },
-  quoridor: { name: 'ムーブ＆ウォール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害。先に反対側の辺へ着いた方が勝ち。2人／4人。' },
-  gobblet: { name: '被せ三目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かして3つ並べる。大きいコマは小さいコマに被せられる。' },
-  hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。お互いに数字を決めて、ヒットとブローを手がかりに相手の数字を先に当てた方が勝ち。' },
-  janken: { name: 'ナインじゃんけん', size: 1, desc: '1点・2点・3点のグー・チョキ・パー、計9枚の手札で9回勝負。勝った手の点数がもらえて、合計点の多い方が勝ち。' },
-  charge: { name: 'チャージ＆アタック', size: 1, desc: 'チャージ・アタック・バリア・リバース・ビクトリーから毎ターン同時に1つ選ぶ読み合い。相手を倒した方が勝ち。' },
-  dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '順番にドットを打ち、4つのドットで形ができたら打った人の負け。正方形のスクエアモードと、同じ円に乗るサークルモード。指摘して判定。2〜4人。' }
+  reversi: { name: 'リバーシ', size: 8,  desc: '8×8。相手の石を挟んで裏返す。石の多い方の勝ち。' },
+  gomoku:  { name: '五目並べ', size: 15, modes: [2, 3], desc: '15×15。縦・横・斜めに5つ並べた方の勝ち。2人戦の先手は三三・四四・長連が禁じ手。' },
+  connect4: { name: '立体四目並べ', size: 7, rows: 6, desc: '7×6。上から石を落とし、縦・横・斜めに4つ並べた方の勝ち。' },
+  quoridor: { name: 'ムーブ＆ウォール', size: 9, modes: [2, 4], desc: '9×9。コマを進めるか壁を置いて妨害する。先に反対側の辺へ着いた方の勝ち。' },
+  gobblet: { name: '被せ三目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かし、3つ並べた方の勝ち。大きいコマは小さいコマに被せられる。' },
+  hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
+  janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
+  charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
+  dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
 const GORDER = ['reversi', 'gobblet', 'connect4', 'gomoku', 'quoridor', 'dots', 'hitblow', 'janken', 'charge'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
@@ -979,7 +985,7 @@ function noFirst() { return S.game === 'janken' || S.game === 'charge'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
 function pickHTML() {
   if (!me.isHost || !S || S.phase !== 'playing' || !S.pre) return '';
-  return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>${S.hb ? '数字が出そろいました。' : ''}先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">中断してゲーム選択へ</button></div></div>`;
+  return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>${S.hb ? '数字が出そろいました。' : ''}先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">中断してゲーム選択に戻る</button></div></div>`;
 }
 function fxStart() {
   if (!S) return;
@@ -1113,7 +1119,7 @@ function createRoom(bi) {
       sweepTimer = setInterval(sweep, 5000);
     }
     ui.offline = false;
-    try { broadcast(); } catch (e) { S.phase = 'lobby'; S.game = 'reversi'; S.np = 2; S.note = '前回の対局は復元できなかったため、ゲーム選択に戻りました。'; broadcast(); }
+    try { broadcast(); } catch (e) { S.phase = 'lobby'; S.game = 'reversi'; S.np = 2; S.note = '前回のゲームは復元できなかったため、ゲーム選択に戻りました。'; broadcast(); }
   });
   c.on('message', (tp, buf) => { let m; try { m = JSON.parse(buf.toString()); } catch (e) { return; } onUp(m); });
   c.on('close', () => { if (opened && net === c) { ui.offline = true; render(); } });
@@ -1183,7 +1189,7 @@ function entryHTML() {
     <div class="panel">
       <label for="name">PLAYER NAME</label>
       <input id="name" maxlength="12" placeholder="なまえ" value="${esc(me.name)}">
-      <button class="btn primary" data-act="create">ルームを作る（ホスト）</button>
+      <button class="btn primary" data-act="create">ルームを作る</button>
       <div class="or">— OR —</div>
       <label for="code">ROOM CODE</label>
       <input id="code" maxlength="6" placeholder="XXXXXX" value="${esc(me.code)}" autocomplete="off">
@@ -1234,7 +1240,7 @@ function dBoardHTML() {
 function caEn(c) { const g = S.ca, n = g.log.length; return n && (ui.jkHold === n || ui.jkPop === n) ? g.log[n - 1][2 + c] : g.en[c]; }
 function caWhy() {
   const r = S.ca.log[S.ca.log.length - 1], wa = r[r[2] - 1], la = r[2 - r[2]];
-  return wa === 1 ? 'アタックが命中' : wa === 4 ? 'ビクトリー発動' : CAN[la] + 'をリバースで跳ね返した';
+  return wa === 1 ? 'アタックが命中しました' : wa === 4 ? 'ビクトリーが発動しました' : CAN[la] + 'をリバースで跳ね返しました';
 }
 function caBoardHTML() {
   const g = S.ca, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L, n = g.log.length;
@@ -1247,7 +1253,7 @@ function caBoardHTML() {
   const txt = r => {
     const a = r[0], b = r[1];
     return r[2] ? esc(nameOf(r[2])) + ' の勝ち' : (a === 3 && b === 0) || (b === 3 && a === 0) ? 'リバース空振り・チャージ成功'
-      : (a === 1 && b === 2) || (a === 2 && b === 1) ? 'バリアで防いだ' : a === b && (a === 1 || a === 4) ? '相打ち' : '続行';
+      : (a === 1 && b === 2) || (a === 2 && b === 1) ? 'バリアで防御' : a === b && (a === 1 || a === 4) ? '相打ち' : '続行';
   };
   const clash = !hold && !!last && ui.jkPop === n;
   const role = (a, b) => a === b ? (a === 0 ? 'up' : a === 1 || a === 4 ? 'clash' : 'fade')
@@ -1433,7 +1439,7 @@ function msgHTML() {
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立' : '', miss: '指摘が外れて失格', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
@@ -1458,8 +1464,8 @@ function msgHTML() {
   }
   let t = my ? (S.turn === my ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : `観戦中 — ${esc(nameOf(S.turn))} の番です`;
   const p = S.passed ? `<small>${esc(nameOf(S.passed))} は置ける場所がないためパス</small>` : '';
-  const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップで選択 → 「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
-    : GAMES[S.game].dk ? '<small>マスを選んで「ここに打つ」。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
+  const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップして選び、「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
+    : GAMES[S.game].dk ? '<small>マスをタップして選び、「ここに打つ」で確定。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1473,11 +1479,12 @@ function mainHTML() {
     return `<section class="panel">
       <h2>01 // SELECT GAME</h2>
       <div class="games">${GORDER.map(k => [k, GAMES[k]]).map(([k, v]) =>
-        `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name}</b><small>${v.desc}</small></button>`).join('')}</div>
+        `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name.replace('＆', '＆<wbr>').replace('ナイン', 'ナイン<wbr>')}</b><small>${!v.modes ? '2人' : v.modes.length > 2 ? '2〜4人' : v.modes.join('・') + '人'}</small></button>`).join('')}</div>
+      <div class="ginfo"><b>${GAMES[S.game].name}</b><p>${GAMES[S.game].desc}</p></div>
       ${modes ? `<div class="modes">${modes.map(n => `<button class="${NP() === n ? 'on' : ''}" data-act="np" data-n="${n}" ${host ? '' : 'disabled'}>${n}人で対戦</button>`).join('')}</div>` : ''}
       ${GAMES[S.game].vars ? `<div class="modes">${GAMES[S.game].vars.map(v => `<button class="${(S.dv === 'ci' ? 'ci' : 'sq') === v[0] ? 'on' : ''}" data-act="dvar" data-v="${v[0]}" ${host ? '' : 'disabled'}>${v[1]}モード</button>`).join('')}</div>` : ''}
       <h2>02 // MATCH UP</h2>
-      <p class="note">${host ? `メンバー一覧で対戦する${NP()}人を選んでください。それ以外の人は観戦になります。` : 'ホストがゲームと対戦者を選んでいます…'}</p>
+      <p class="note">${host ? `メンバー一覧から、対戦する${NP()}人を選んでください。選ばれなかった人は観戦になります。` : 'ホストがゲームとプレイヤーを選んでいます…'}</p>
       ${NP() === 2 ? `<div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>`
                    : `<div class="vs four">${Array.from({ length: NP() }, (_, k) => slotHTML('p' + (k + 1))).join('')}</div>`}
 
@@ -1512,7 +1519,7 @@ function mainHTML() {
     }
     if (S.game === 'janken' && my && !ui.offline && !ui.jkHold && !ui.jkPop && S.jk.pick[my] < 0) {
       const k = ui.jkSel >= 0 && S.jk.hand[my][ui.jkSel] ? ui.jkSel : -1;
-      pad = `<div class="pad"><button class="put" data-act="jput" ${k >= 0 ? '' : 'disabled'}>${k >= 0 ? JE[k % 3] + ' ' + (Math.floor(k / 3) + 1) + '点を出す' : '手を選んでください'}</button></div>`;
+      pad = `<div class="pad"><button class="put" data-act="jput" ${k >= 0 ? '' : 'disabled'}>${k >= 0 ? JE[k % 3] + ' ' + (Math.floor(k / 3) + 1) + '点を出す' : '出す手を選んでください'}</button></div>`;
     }
     if (S.game === 'hitblow' && my && !ui.offline && (!S.hb.set[my] || S.turn === my)) {
       const v = ui.hbIn, setup = !S.hb.set[my];
@@ -1539,11 +1546,11 @@ function mainHTML() {
       </div>` : '');
     }
     if (my && NP() === 2) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
-    if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択へ</button>`;
+    if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択に戻る</button>`;
   } else if (host) {
-    btn += `<button class="btn sm primary" data-act="lobby">次のゲームを選ぶ</button>
+    btn += `<button class="btn sm primary" data-act="lobby">ゲーム選択に戻る</button>
             <button class="btn sm" data-act="start">再戦する</button>`;
-  } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
+  } else btn = `<p class="note">ホストがゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
     <div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
@@ -1572,8 +1579,8 @@ function sideHTML() {
     return `<li class="${m.online ? '' : 'off'}"><div class="mrow"><span>${esc(m.name)}${tag} <em>${m.cid === me.cid ? 'YOU' : ''}${m.online ? '' : ' 切断中'}</em></span>${badge}</div>${statHTML(m)}${ctl}</li>`;
   }).join('');
   return `<aside class="panel"><h2>MEMBERS // ${S.members.length}</h2><ul class="members">${items}</ul>
-    ${host && S.stats && Object.keys(S.stats).length ? `<div class="statctl"><button class="btn sm" data-act="statreset">勝敗記録をリセット</button></div>` : ''}
-    <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
+    ${host && S.stats && Object.keys(S.stats).length ? `<div class="statctl"><button class="btn sm" data-act="statreset">勝敗記録をリセットする</button></div>` : ''}
+    <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピーする'}</button>
     <button class="btn mg" data-act="leave">${host ? 'ルームを解散する' : 'ルームから退出する'}</button></aside>`;
 }
 let AC = null;
@@ -1945,7 +1952,7 @@ document.addEventListener('click', e => {
   else if (a === 'statreset') { if (confirm('全員の勝敗記録をリセットしますか？')) { S.stats = {}; broadcast(); } }
   else if (a === 'kick') {
     const m = S.members.find(x => x.cid === el.dataset.cid);
-    if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
+    if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対戦中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
   }
   else if (a === 'start') { if (me.isHost) startGame(); }
   else if (a === 'pick') { if (me.isHost) pickFirst(Number(el.dataset.f)); }
