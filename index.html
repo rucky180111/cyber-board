@@ -1213,7 +1213,7 @@ function caWhy() {
 function caBoardHTML() {
   const g = S.ca, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L, n = g.log.length;
   const hold = n > 0 && ui.jkHold === n, last = n ? g.log[n - 1] : null;
-  const canPick = !over && !hold && ui.jkPop !== n && my && g.pick[my] < 0 && !ui.offline;
+  const canPick = !over && !hold && !ui.jkPop && my && g.pick[my] < 0 && !ui.offline;
   if (!canPick || (ui.caSel >= 0 && g.en[my] < CAC[ui.caSel])) ui.caSel = -1;
   const pips = e => `<span class="capips">${'<i></i>'.repeat(Math.min(e, 8))}${e > 8 ? '+' : ''}</span>`;
   const side = c => `<div class="jside c${c}${over && S.winner && S.winner !== c && S.why === 'ko' ? ' ko' : ''}"><div class="jhead"><span>${esc(nameOf(c))}${hold || (!over && g.pick[c] >= 0) ? '<em>出しました</em>' : ''}</span><b>EN ${caEn(c)}</b></div>${pips(caEn(c))}</div>`;
@@ -1281,7 +1281,7 @@ function jSpark(lv, t0) {
 function jBoardHTML() {
   const j = S.jk, my = colorOf(me.cid), over = S.phase === 'result', L = my || 1, R = 3 - L;
   const hold = j.log.length > 0 && ui.jkHold === j.log.length, hl = hold ? j.log[j.log.length - 1] : null;
-  const canPick = !over && !hold && ui.jkPop !== j.log.length && my && j.pick[my] < 0 && !ui.offline;
+  const canPick = !over && !hold && !ui.jkPop && my && j.pick[my] < 0 && !ui.offline;
   if (!canPick || (ui.jkSel >= 0 && !j.hand[my][ui.jkSel])) ui.jkSel = -1;
   const pts = k => Math.floor(k / 3) + 1;
   const hand = (c, inter) => `<div class="jhand">${[0, 1, 2].map(p => `<div class="jgrp"><div class="jrow">${[0, 1, 2].map(t => {
