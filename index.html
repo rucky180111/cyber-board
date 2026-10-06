@@ -216,8 +216,8 @@ button:not(:disabled):active{transform:scale(.95)}
 .tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
-.sg{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));gap:3px;width:min(100%,460px);aspect-ratio:1;margin:10px auto 8px}
-.sgc{position:relative;min-width:0;min-height:0;overflow:hidden;line-height:1;padding:0;border:1px solid rgba(0,240,255,.4);background:linear-gradient(135deg,#0c1b3a,#060c20);box-shadow:inset 0 0 8px rgba(0,240,255,.12);cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:clamp(14px,4.4vw,22px);color:var(--tx)}
+.sg{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-template-rows:repeat(9,minmax(0,1fr));gap:3px;width:min(100%,480px);aspect-ratio:1;margin:10px auto 8px}
+.sgc{position:relative;min-width:0;min-height:0;overflow:hidden;line-height:1;padding:0;border:1px solid rgba(0,240,255,.4);background:linear-gradient(135deg,#0c1b3a,#060c20);box-shadow:inset 0 0 8px rgba(0,240,255,.12);cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:clamp(13px,4vw,21px);color:var(--tx)}
 .sgc:disabled{cursor:default}
 .sgc.op{background:#02040b;border-color:rgba(0,240,255,.1);box-shadow:none}
 .sgc.last{border-color:#fff}
@@ -587,7 +587,7 @@ const GAMES = {
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
-  search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '8×8のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
+  search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
@@ -918,21 +918,21 @@ function rForbidden(b, x, y, depth) {
   return r;
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
-function sgInit(np) { return { n: 8, op: new Array(64).fill(-1), it: null, sc: new Array(np + 1).fill(0), left: 21, cnt: 15, ev: null, gid: Math.random().toString(36).slice(2, 8) }; }
+function sgInit(np) { return { n: 9, op: new Array(81).fill(-1), it: null, sc: new Array(np + 1).fill(0), left: 27, cnt: 20, ev: null, gid: Math.random().toString(36).slice(2, 8) }; }
 function sgAdj(k) {
-  const x = k % 8, y = (k - x) / 8, r = [];
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && x + dx >= 0 && x + dx < 8 && y + dy >= 0 && y + dy < 8) r.push((y + dy) * 8 + x + dx);
+  const x = k % 9, y = (k - x) / 9, r = [];
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && x + dx >= 0 && x + dx < 9 && y + dy >= 0 && y + dy < 9) r.push((y + dy) * 9 + x + dx);
   return r;
 }
 function sgApply(s, i, c) {
   const d = s.sh, np = s.np, k = i - 90000;
-  if (s.phase !== 'playing' || !d || !c || s.turn !== c || !Number.isInteger(k) || k < 0 || k > 63 || d.op[k] !== -1) return false;
+  if (s.phase !== 'playing' || !d || !c || s.turn !== c || !Number.isInteger(k) || k < 0 || k > 80 || d.op[k] !== -1) return false;
   if (!d.it) {
     const ban = new Set(sgAdj(k).concat(k)), pool = [];
-    for (let q = 0; q < 64; q++) if (!ban.has(q)) pool.push(q);
+    for (let q = 0; q < 81; q++) if (!ban.has(q)) pool.push(q);
     for (let q = pool.length - 1; q > 0; q--) { const r = Math.floor(Math.random() * (q + 1)), z = pool[q]; pool[q] = pool[r]; pool[r] = z; }
-    d.it = new Array(64).fill(0);
-    [3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].forEach((v, q) => { d.it[pool[q]] = v; });
+    d.it = new Array(81).fill(0);
+    [3, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].forEach((v, q) => { d.it[pool[q]] = v; });
   }
   s.last = k;
   const v = d.it[k];
@@ -1362,15 +1362,15 @@ function sgBoardHTML() {
   const mv = (S.gno || 0) + ':' + (S.mv || 0);
   if (!ui.sgP || ui.sgP.gid !== d.gid) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: null };
   else if (ui.sgP.mv !== mv) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: ui.sgP.op };
-  const prev = ui.sgP.prev, lx = S.last % 8, ly = Math.floor(S.last / 8);
+  const prev = ui.sgP.prev, lx = S.last % 9, ly = Math.floor(S.last / 9);
   const gem = (v, cls) => `<i class="gem v${v} ${cls}"><u>${v}</u></i>`;
   let h = '<div class="sg">';
-  for (let i = 0; i < 64; i++) {
-    const o = d.op[i], nw = prev && prev[i] === -1 && o !== -1, fd = Math.max(Math.abs(i % 8 - lx), Math.abs(Math.floor(i / 8) - ly));
+  for (let i = 0; i < 81; i++) {
+    const o = d.op[i], nw = prev && prev[i] === -1 && o !== -1, fd = Math.max(Math.abs(i % 9 - lx), Math.abs(Math.floor(i / 9) - ly));
     const body = o >= 100 ? gem(o % 10, 'c' + Math.floor((o - 100) / 10)) : o > 0 ? `<b class="n${Math.min(o, 5)}">${o}</b>` : o === -1 && over && d.it && d.it[i] ? gem(d.it[i], 'un') : '';
-    h += `<button class="sgc${o === -1 ? '' : ' op'}${nw ? ' nw' : ''}${i === S.last ? ' last' : ''}" style="--fd:${fd}" data-act="sgopen" data-i="${i}" ${can && o === -1 ? '' : 'disabled'} aria-label="${i % 8 + 1},${Math.floor(i / 8) + 1}">${body}</button>`;
+    h += `<button class="sgc${o === -1 ? '' : ' op'}${nw ? ' nw' : ''}${i === S.last ? ' last' : ''}" style="--fd:${fd}" data-act="sgopen" data-i="${i}" ${can && o === -1 ? '' : 'disabled'} aria-label="${i % 9 + 1},${Math.floor(i / 9) + 1}">${body}</button>`;
   }
-  return h + `</div><p class="dcgoal">CRYSTAL ${d.cnt} / 15 ■ 残り ${d.left}点</p>`;
+  return h + `</div><p class="dcgoal">CRYSTAL ${d.cnt} / 20 ■ 残り ${d.left}点</p>`;
 }
 const PIP = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 function dcBoardHTML() {
