@@ -135,6 +135,22 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .dwarn{text-align:center;margin:8px 0 0;color:var(--mg)}
 .pl.out{opacity:.3}
 .pl.out span{text-decoration:line-through}
+button{transition:transform .08s ease-out}
+button:not(:disabled):active{transform:scale(.95)}
+@media(hover:hover){.cell:not(:disabled):hover,.gcell:not(:disabled):hover{background:rgba(0,240,255,.1)}}
+@keyframes thud{30%{transform:translateY(3px) scale(.995)}}
+.fx .bwrap{animation:thud .22s ease-out}
+@keyframes msgin{from{opacity:.2;transform:translateY(-4px)}}
+.fx .msg{animation:msgin .28s ease-out}
+@keyframes holdz{to{transform:scale(1.035);filter:saturate(1.35) brightness(1.12)}}
+.hold .bwrap{animation:holdz .95s cubic-bezier(.1,.6,.2,1) both}
+.hold .score{opacity:.4}
+.hold .panel .btn,.fin .panel .btn{visibility:hidden}
+@keyframes panelin{from{opacity:0;transform:translateY(14px) scale(.985);filter:blur(4px)}}
+.enter .panel{animation:panelin .4s cubic-bezier(.2,.9,.3,1)}
+.tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
+@keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
+@media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
 .fxtog{background:transparent;border:1px solid var(--line);color:var(--dim);font-family:var(--disp);font-size:9px;letter-spacing:.12em;padding:4px 7px;cursor:pointer}
 .fxtog.on{border-color:var(--cy);color:var(--cy)}
 .fxov{position:fixed;inset:0;z-index:50;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;animation:fxfade 2.7s ease-out forwards}
@@ -867,6 +883,7 @@ function fxStart() {
   o.className = 'fxov start' + (nf ? ' draw' : ' c1');
   o.innerHTML = `<div class="fxbar"></div><div class="fxtxt" data-t="GAME START">GAME START</div><div class="fxsub">${nf ? esc(GAMES[S.game].name) : esc(nameOf(1)) + ' 先手'}</div>`;
   document.body.appendChild(o);
+  sfx('start');
   setTimeout(() => o.remove(), 2000);
 }
 function pickFirst(first) {
@@ -1280,6 +1297,7 @@ function boardHTML() {
 function msgHTML() {
   const my = colorOf(me.cid);
   if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">READY</div>';
+  if (S.phase === 'result' && HOLD()) return '<div class="msg finm">. . .</div>';
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
@@ -1426,12 +1444,56 @@ function sideHTML() {
     <button class="btn" data-act="copy">${ui.copied ? 'コピーしました' : '招待リンクをコピー'}</button>
     <button class="btn mg" data-act="leave">${host ? 'ルームを解散する' : 'ルームから退出する'}</button></aside>`;
 }
+let AC = null;
+ui.snd = store.get('cb_snd') !== '0';
+const SF = {
+  tap: [[900, 900, 0, .03, 'square', .04]],
+  place: [[190, 80, 0, .1, 'sine', .3], [1400, 900, 0, .025, 'square', .05]],
+  turn: [[660, 660, 0, .07, 'triangle', .12], [990, 990, .08, .1, 'triangle', .12]],
+  start: [[220, 880, 0, .35, 'sawtooth', .06], [660, 660, .35, .12, 'square', .07], [880, 880, .47, .25, 'square', .07]],
+  hold: [[70, 150, 0, .9, 'sawtooth', .07], [140, 300, 0, .9, 'sine', .06]],
+  fin: [[160, 40, 0, .45, 'sine', .4], [2000, 300, 0, .18, 'sawtooth', .06]],
+  win: [[523, 523, 0, .1, 'square', .08], [659, 659, .1, .1, 'square', .08], [784, 784, .2, .1, 'square', .08], [1047, 1047, .3, .4, 'square', .09], [1568, 1568, .3, .4, 'triangle', .06]],
+  lose: [[392, 392, 0, .18, 'sawtooth', .06], [330, 330, .18, .18, 'sawtooth', .06], [262, 196, .36, .5, 'sawtooth', .07]],
+  draw: [[440, 440, 0, .15, 'triangle', .1], [440, 440, .2, .3, 'triangle', .1]]
+};
+function sfx(n) {
+  if (!ui.snd || !SF[n]) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state !== 'running') { AC.resume(); return; }
+    for (const [f0, f1, t0, d, type, v] of SF[n]) {
+      const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + t0;
+      o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + d);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .008); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .03);
+    }
+  } catch (e) {}
+}
+function vib(p) { try { if (ui.snd && navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+function turnChip() {
+  const o = document.createElement('div');
+  o.className = 'tchip'; o.textContent = 'YOUR TURN';
+  document.body.appendChild(o);
+  setTimeout(() => o.remove(), 1150);
+  setTimeout(() => sfx('turn'), 180);
+}
+function HOLD() { return ui.holdUntil > Date.now(); }
 function fxTick() {
-  const key = (S.gno || 0) + ':' + (S.mv || 0) + ':' + S.phase;
-  ui.fx = ui.fxOn && ui.fxKey !== undefined && ui.fxKey !== key && S.phase !== 'lobby';
+  const key = (S.gno || 0) + ':' + (S.mv || 0) + ':' + S.phase, my = colorOf(me.cid);
+  const changed = ui.fxOn && ui.fxKey !== undefined && ui.fxKey !== key && S.phase !== 'lobby';
+  ui.fx = changed || HOLD();
+  ui.enter = ui.fxPh !== undefined && ui.fxPh !== S.phase && S.phase !== 'result';
+  if (changed && (S.mv || 0) > 0 && ui.fxMv !== S.mv) {
+    sfx('place');
+    if (S.phase === 'playing' && my && S.turn === my && ui.fxTurn !== my) { vib(25); turnChip(); }
+  }
+  ui.fxMv = S.mv;
+  ui.fxTurn = S.turn; ui.fxPh = S.phase;
   ui.fxKey = key;
   const b = S.board || [];
-  ui.flip = ui.fx && S.game === 'reversi' && ui.pb && ui.pb.length === b.length ? b.map((v, i) => !!(v && ui.pb[i] && ui.pb[i] !== v)) : null;
+  if (changed || !HOLD()) ui.flip = changed && S.game === 'reversi' && ui.pb && ui.pb.length === b.length ? b.map((v, i) => !!(v && ui.pb[i] && ui.pb[i] !== v)) : null;
   ui.pb = b.slice();
 }
 function fxResult() {
@@ -1441,14 +1503,26 @@ function fxResult() {
   if (S.phase !== 'result' || ui.fxRes === key || ((S.jk || S.ca) && ui.jkHold)) return;
   ui.fxRes = key;
   if (!ui.fxOn) return;
-  const dur = !S.winner || S.why === 'resign' ? 0 : ({ hitblow: 2000, reversi: 1800 })[S.game] || 1500;
-  if (!dur) { fxOverlay(); return; }
-  ui.finUntil = Date.now() + dur;
+  const big = S.winner && S.why !== 'resign', ok = () => S && (S.gno || 0) === key && S.phase === 'result';
+  const dur = !big ? 0 : ({ hitblow: 2000, reversi: 1800 })[S.game] || 1500;
+  const hold = S.jk || S.ca ? 450 : big ? 950 : 500;
+  ui.holdUntil = Date.now() + hold;
+  if (big) sfx('hold');
   render();
   setTimeout(() => {
-    ui.finUntil = 0;
-    if (S && (S.gno || 0) === key && S.phase === 'result') { render(); fxOverlay(); }
-  }, dur);
+    ui.holdUntil = 0;
+    if (!ok()) return;
+    if (!dur) { render(); fxOverlay(); return; }
+    ui.finUntil = Date.now() + dur;
+    sfx('fin'); vib(40);
+    render();
+    setTimeout(() => {
+      ui.finUntil = 0;
+      if (!ok()) return;
+      render();
+      setTimeout(() => { if (ok()) fxOverlay(); }, 350);
+    }, dur);
+  }, hold);
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
@@ -1471,6 +1545,7 @@ function fxOverlay() {
   const my = colorOf(me.cid), w = S.winner, kind = !w ? 'draw' : !my ? 'spec' : w === my ? 'win' : 'lose';
   const text = kind === 'draw' ? 'DRAW' : kind === 'win' ? 'YOU WIN' : kind === 'lose' ? 'YOU LOSE' : 'WINNER';
   const sub = kind === 'draw' ? '引き分け' : kind === 'win' ? 'VICTORY' : nameOf(w) + ' の勝ち';
+  sfx(kind === 'spec' ? 'win' : kind); vib(kind === 'win' ? [40, 60, 40, 60, 120] : 60);
   const o = document.createElement('div');
   o.className = 'fxov ' + kind + (kind === 'spec' ? ' c' + w : '');
   let h = `<div class="fxbar"></div><div class="fxtxt" data-t="${text}">${text}</div><div class="fxsub">${esc(sub)}</div>`;
@@ -1486,11 +1561,16 @@ function fxOverlay() {
 }
 function roomHTML() {
   fxTick();
+  const hold = HOLD(), L = S.line;
+  if (hold) S.line = null;
+  const body = mainHTML() + sideHTML();
+  S.line = L;
   return `<header class="top"><h1 class="logo">CYBER<span>BOARD</span></h1>
+      <button class="fxtog${ui.snd ? ' on' : ''}" data-act="snd" aria-pressed="${ui.snd}">SOUND ${ui.snd ? 'ON' : 'OFF'}</button>
       <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
     ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
     ${S.note && S.phase === 'lobby' ? `<div class="offline">${esc(S.note)}</div>` : ''}
-    <div class="layout${ui.fx ? ' fx' : ''}${FIN() ? ' fin' : ''}">${mainHTML()}${sideHTML()}</div>`;
+    <div class="layout${ui.fx ? ' fx' : ''}${FIN() ? ' fin' : ''}${hold ? ' hold' : ''}${ui.enter ? ' enter' : ''}">${body}</div>`;
 }
 function render() {
   const app = $('#app');
@@ -1509,6 +1589,8 @@ function readEntry() {
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
   const a = el.dataset.act, host = me.isHost;
+  if (a === 'snd') { ui.snd = !ui.snd; store.set('cb_snd', ui.snd ? '1' : '0'); sfx('tap'); render(); return; }
+  sfx('tap');
   if (a === 'create') { if (readEntry()) { rehost = false; S = null; createRoom(0); } }
   else if (a === 'join') { if (readEntry()) { if (!CODE_RE.test(me.code)) { ui.error = 'ルームコード（6文字）を正しく入力してください。'; render(); } else joinRoom(); } }
   else if (a === 'copy') {
