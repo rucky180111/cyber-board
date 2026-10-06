@@ -217,12 +217,12 @@ button:not(:disabled):active{transform:scale(.95)}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
 .dc{max-width:520px;margin:10px auto 0;display:grid;gap:8px}
-.dcrow{display:grid;grid-template-columns:minmax(0,5.5em) 1fr 3em;gap:8px;align-items:center;opacity:.55;border:0}
+.dcrow{display:grid;grid-template-columns:minmax(0,5.5em) 1fr 2.2em 2.8em;gap:8px;align-items:center;opacity:.55;border:0}
 .dcrow.act{opacity:1}
 .dcrow span{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcrow b{font-family:var(--disp);font-size:18px;text-align:right}
 .dcrow.fin{opacity:.9}
-.dcrow.fin b{color:var(--yl);font-family:inherit;font-size:14px}
+.dcrow em{font-style:normal;font-size:12px;font-weight:700;color:var(--yl);text-align:right;white-space:nowrap}
 .dcbar{position:relative;height:16px;border:1px solid currentColor;background:#03060f;overflow:hidden}
 .dcbar i{position:absolute;left:0;top:0;bottom:0;background:currentColor;box-shadow:0 0 10px currentColor}
 .dcbar u{position:absolute;top:0;bottom:0;background:var(--yl);opacity:.8;animation:blink .6s ease-in-out infinite}
@@ -570,7 +570,7 @@ const GAMES = {
   gobblet: { name: '被せ三目並べ', size: 3, desc: '3×3。大中小のコマを置くか動かし、3つ並べた方の勝ち。大きいコマは小さいコマに被せられる。' },
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
-  dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。' },
+  dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
@@ -901,25 +901,41 @@ function rForbidden(b, x, y, depth) {
   return r;
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
-function dcInit(np) { return { sc: new Array(np + 1).fill(0), pot: 0, die: 0, n: 0, bust: 0, bank: 0, by: 0, rank: [], goal: 50 }; }
-function dcNext(d, c, np) { for (let k = 0; k < np; k++) { c = c % np + 1; if (!d.rank.includes(c)) return c; } return 0; }
-function dcApply(s, i, c, roll) {
+function dcInit(np) { return { sc: new Array(np + 1).fill(0), pot: 0, die: 0, n: 0, bust: 0, bank: 0, by: 0, rank: [], pos: new Array(np + 1).fill(0), pend: [], goal: 50 }; }
+function dcNext(d, c, np) { for (let k = 0; k < np; k++) { c = c % np + 1; if (!d.pos[c] && !d.pend.includes(c)) return c; } return 0; }
+function dcPass(s, c) {
   const d = s.dc, np = s.np;
+  let nx = dcNext(d, c, np);
+  if (d.pend.length && (!nx || nx <= c)) {
+    const base = d.rank.length;
+    d.pend.sort((a, b) => d.sc[b] - d.sc[a]);
+    d.pend.forEach((p, k) => { d.pos[p] = k && d.sc[p] === d.sc[d.pend[k - 1]] ? d.pos[d.pend[k - 1]] : base + k + 1; d.rank.push(p); });
+    d.pend = [];
+    const left = [];
+    for (let p = 1; p <= np; p++) if (!d.pos[p]) left.push(p);
+    if (left.length <= 1) {
+      if (left.length) { d.pos[left[0]] = d.rank.length + 1; d.rank.push(left[0]); }
+      const top = d.rank.filter(p => d.pos[p] === 1);
+      finish(s, top.length === 1 ? top[0] : 0, 'dice');
+      return;
+    }
+    nx = dcNext(d, np, np);
+  }
+  s.turn = nx;
+}
+function dcApply(s, i, c, roll) {
+  const d = s.dc;
   if (s.phase !== 'playing' || !d || !c || s.turn !== c) return false;
   if (i === 80000) {
     const v = roll || 1 + Math.floor(Math.random() * 6);
     d.die = v; d.n++; d.by = c; d.bust = 0; d.bank = 0;
-    if (v === 1) { d.pot = 0; d.bust = 1; s.turn = dcNext(d, c, np); return true; }
-    d.pot += v;
-    if (d.sc[c] + d.pot < d.goal) return true;
-  } else if (i !== 80001 || d.pot <= 0) return false;
-  else d.die = 0;
-  d.sc[c] += d.pot; d.bank = d.pot; d.pot = 0; d.by = c; d.bust = 0; d.n++;
-  if (d.sc[c] >= d.goal) {
-    d.rank.push(c);
-    if (d.rank.length >= np - 1) { const l = dcNext(d, c, np); if (l) d.rank.push(l); finish(s, d.rank[0], 'dice'); return true; }
+    if (v === 1) { d.pot = 0; d.bust = 1; dcPass(s, c); } else d.pot += v;
+    return true;
   }
-  s.turn = dcNext(d, c, np);
+  if (i !== 80001 || d.pot <= 0) return false;
+  d.sc[c] += d.pot; d.bank = d.pot; d.pot = 0; d.by = c; d.bust = 0; d.die = 0; d.n++;
+  if (d.sc[c] >= d.goal) d.pend.push(c);
+  dcPass(s, c);
   return true;
 }
 function applyMove(s, i, c) {
@@ -1289,8 +1305,8 @@ const PIP = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3
 function dcBoardHTML() {
   const d = S.dc, who = d.by || S.turn || 1, pc = v => Math.min(100, v / d.goal * 100).toFixed(1);
   const rows = Array.from({ length: NP() }, (_, k) => {
-    const p = k + 1, r = d.rank.indexOf(p);
-    return `<div class="dcrow c${p}${S.turn === p ? ' act' : ''}${r >= 0 ? ' fin' : ''}"><span>${esc(nameOf(p))}</span><div class="dcbar"><i style="width:${pc(d.sc[p])}%"></i>${S.turn === p && d.pot ? `<u style="left:${pc(d.sc[p])}%;width:${pc(Math.min(d.pot, d.goal - d.sc[p]))}%"></u>` : ''}</div><b>${r >= 0 ? (r + 1) + '位' : d.sc[p]}</b></div>`;
+    const p = k + 1, r = d.pos[p], g = d.pend.includes(p);
+    return `<div class="dcrow c${p}${S.turn === p ? ' act' : ''}${r || g ? ' fin' : ''}"><span>${esc(nameOf(p))}</span><div class="dcbar"><i style="width:${pc(d.sc[p])}%"></i>${S.turn === p && d.pot ? `<u style="left:${pc(d.sc[p])}%;width:${pc(Math.min(d.pot, d.goal - d.sc[p]))}%"></u>` : ''}</div><b>${d.sc[p]}</b><em>${r ? r + '位' : g ? 'GOAL' : ''}</em></div>`;
   }).join('');
   const die = d.die ? `<div class="dcdie c${who}${d.bust ? ' bust' : ''}">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(q => `<i class="${PIP[d.die].includes(q) ? 'on' : ''}"></i>`).join('')}</div>` : `<div class="dcdie idle c${S.turn || who}">?</div>`;
   const info = d.bust ? `<b class="dcpot bust">BURST</b><small>${esc(nameOf(d.by))} の点は没収</small>`
@@ -1500,7 +1516,7 @@ function msgHTML() {
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', dice: S.dc ? S.dc.rank.map((c, k) => (k + 1) + '位 ' + esc(nameOf(c))).join(' ／ ') : '' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
@@ -1528,7 +1544,7 @@ function msgHTML() {
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップして選び、「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
     : GAMES[S.game].dk ? '<small>マスをタップして選び、「ここに打つ」で確定。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
-    : S.game === 'dice' ? '<small>振るたびに点が貯まります。1が出ると、このターンの点は没収です</small>'
+    : S.game === 'dice' ? (S.dc.pend.length ? `<small>${S.dc.pend.map(c => esc(nameOf(c)) + ' ' + S.dc.sc[c] + '点').join('、')} でゴール済み。この周のうちに上回れば逆転できます</small>` : '<small>振るたびに点が貯まります。1が出ると、このターンの点は没収です</small>')
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
   return `<div class="msg">${t}${p}${g}</div>`;
