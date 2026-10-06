@@ -216,6 +216,20 @@ button:not(:disabled):active{transform:scale(.95)}
 .tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
+.el{display:block;width:min(100%,520px);margin:8px auto 6px;overflow:visible}
+.hx{fill:#05080f;stroke:rgba(0,240,255,.26);stroke-width:.35}
+.hx.z2{fill:#061826}.hx.z4{fill:#0a2a3d}.hx.z8{fill:#35380a}
+.hx.tr{fill:currentColor;fill-opacity:.5;stroke:currentColor;stroke-width:.5}
+.hx.cand{fill:rgba(246,255,0,.3);stroke:var(--yl);stroke-width:.8;cursor:pointer;animation:blink 1s ease-in-out infinite}
+.hx.sel{fill:rgba(246,255,0,.75);stroke:#fff;stroke-width:.8;cursor:pointer}
+.elhd{fill:currentColor;stroke:#fff;stroke-width:.9;pointer-events:none;filter:drop-shadow(0 0 2px currentColor);transform-box:fill-box;transform-origin:center}
+.elhd.dd{fill:#1a1d28;stroke:currentColor;opacity:.75;filter:none}
+.eltx{font-family:var(--disp);font-size:8px;font-weight:900;fill:#03050d;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.crx{font-size:13px;fill:#fff;text-anchor:middle;dominant-baseline:central;pointer-events:none;filter:drop-shadow(0 0 3px var(--mg));transform-box:fill-box;transform-origin:center}
+.fx .hx.nw{animation:hxin .34s ease-out calc(var(--st,0) * 220ms) both}
+@keyframes hxin{0%{fill:#fff;fill-opacity:0;stroke-opacity:0}35%{fill:#fff;fill-opacity:1}}
+.fx .elhd{animation:finpop .3s cubic-bezier(.2,1.7,.4,1) calc(var(--st,0) * 220ms - 120ms) both}
+.fx .crx{animation:finpop .4s cubic-bezier(.2,1.8,.4,1) calc(var(--st,0) * 220ms + 100ms) both}
 .sg{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));grid-template-rows:repeat(9,minmax(0,1fr));gap:3px;width:min(100%,480px);aspect-ratio:1;margin:10px auto 8px}
 .sgc{position:relative;min-width:0;min-height:0;overflow:hidden;line-height:1;padding:0;border:1px solid rgba(0,240,255,.4);background:linear-gradient(135deg,#0c1b3a,#060c20);box-shadow:inset 0 0 8px rgba(0,240,255,.12);cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:clamp(13px,4vw,21px);color:var(--tx)}
 .sgc:disabled{cursor:default}
@@ -588,10 +602,11 @@ const GAMES = {
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
   search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
+  energy: { name: 'エナジーライン', size: 1, modes: [2, 3, 4], desc: '六角形のマスを全員同時に進み、通った跡が光の壁になる。壁や相手にぶつかるとクラッシュ。中央ほどエナジーが貯まり、エナジーを使うと1ターンに何マスも進める。最後まで走り続けた人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
-const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice', 'search'];
+const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice', 'search', 'energy'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
@@ -918,6 +933,63 @@ function rForbidden(b, x, y, depth) {
   return r;
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
+const EDIR = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+function elIdx(R, q, r) { return Math.abs(q) <= R && Math.abs(r) <= R && Math.abs(q + r) <= R ? (r + R) * (2 * R + 1) + q + R : -1; }
+function elQR(R, i) { const W = 2 * R + 1; return [i % W - R, Math.floor(i / W) - R]; }
+function elAdj(R, i) { const a = elQR(R, i); return EDIR.map(d => elIdx(R, a[0] + d[0], a[1] + d[1])); }
+function elGain(R, i) { const a = elQR(R, i), ring = R - (Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[0] + a[1])) / 2; return ring <= 1 ? 0 : ring === 2 ? 2 : ring === 3 ? 4 : 8; }
+function elInit(np) {
+  const R = np === 2 ? 4 : 5, W = 2 * R + 1, st = np === 2 ? [0, 3] : np === 3 ? [0, 2, 4] : [0, 1, 3, 4];
+  const d = { R, tr: new Array(W * W).fill(0), pos: [0], en: [0], alive: [0], pick: [null], log: null, n: 0, cap: 50, gid: Math.random().toString(36).slice(2, 8) };
+  st.forEach((k, j) => { const i = elIdx(R, EDIR[k][0] * R, EDIR[k][1] * R); d.pos.push(i); d.en.push(10); d.alive.push(1); d.pick.push(null); d.tr[i] = j + 1; });
+  return d;
+}
+function elResolve(s) {
+  const d = s.el, np = s.np, P = d.pick, rem = [0], dead = {}, log = { n: d.n + 1, mv: [], cr: [], steps: 0 };
+  for (let c = 1; c <= np; c++) { rem[c] = d.alive[c] ? d.en[c] - 10 * (P[c].length - 1) : 0; if (d.alive[c]) log.steps = Math.max(log.steps, P[c].length); }
+  for (let t = 0; t < log.steps; t++) {
+    const tg = {};
+    for (let c = 1; c <= np; c++) {
+      if (!d.alive[c] || dead[c] || P[c].length <= t) continue;
+      const x = P[c][t];
+      if (d.tr[x]) { dead[c] = 1; log.cr.push([c, x, t, 'wall']); } else (tg[x] = tg[x] || []).push(c);
+    }
+    Object.keys(tg).forEach(k => {
+      const x = Number(k), g = tg[k], mx = Math.max.apply(null, g.map(c => rem[c])), top = g.filter(c => rem[c] === mx);
+      g.forEach(c => { if (top.length > 1 || c !== top[0]) { dead[c] = 1; log.cr.push([c, x, t, 'clash']); } });
+      if (top.length === 1) { d.pos[top[0]] = x; d.tr[x] = top[0]; log.mv.push([x, top[0], t]); }
+    });
+  }
+  for (let c = 1; c <= np; c++) {
+    if (!d.alive[c]) continue;
+    if (dead[c]) d.alive[c] = 0; else d.en[c] = Math.min(d.cap, rem[c] + elGain(d.R, d.pos[c]));
+  }
+  for (let c = 1; c <= np; c++) if (d.alive[c] && elAdj(d.R, d.pos[c]).every(x => x < 0 || d.tr[x])) { dead[c] = 1; log.cr.push([c, d.pos[c], log.steps, 'stuck']); }
+  for (let c = 1; c <= np; c++) { if (dead[c]) d.alive[c] = 0; d.pick[c] = null; }
+  d.n++; d.log = log;
+  const al = [];
+  for (let c = 1; c <= np; c++) if (d.alive[c]) al.push(c);
+  if (al.length <= 1) finish(s, al[0] || 0, 'energy');
+}
+function elApply(s, i, c) {
+  const d = s.el, np = s.np;
+  if (s.phase !== 'playing' || !d || !c || !d.alive[c] || d.pick[c]) return false;
+  let v = i - 100000000, cur = d.pos[c];
+  if (!Number.isInteger(v) || v <= 0) return false;
+  const path = [];
+  while (v > 0) {
+    const g = v % 7; v = (v - g) / 7;
+    if (g < 1 || path.length >= 6) return false;
+    const nx = elAdj(d.R, cur)[g - 1];
+    if (nx < 0 || d.tr[nx] || path.includes(nx)) return false;
+    path.push(nx); cur = nx;
+  }
+  if (10 * (path.length - 1) > d.en[c]) return false;
+  d.pick[c] = path;
+  for (let p = 1; p <= np; p++) if (d.alive[p] && !d.pick[p]) return true;
+  elResolve(s);
+  return true;
+}
 function sgInit(np) { return { n: 9, op: new Array(81).fill(-1), it: null, sc: new Array(np + 1).fill(0), left: 27, cnt: 20, ev: null, gid: Math.random().toString(36).slice(2, 8) }; }
 function sgAdj(k) {
   const x = k % 9, y = (k - x) / 9, r = [];
@@ -999,6 +1071,7 @@ function applyMove(s, i, c) {
   if (s.game === 'charge') return caApply(s, i, c);
   if (s.game === 'dice') return dcApply(s, i, c);
   if (s.game === 'search') return sgApply(s, i, c);
+  if (s.game === 'energy') return elApply(s, i, c);
   if (GAMES[s.game] && GAMES[s.game].dk) return dApply(s, i, c);
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
@@ -1083,6 +1156,7 @@ function broadcast() {
   let pub = S;
   if (S.phase === 'playing' && S.hb) pub = Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) });
   if (S.phase === 'playing' && S.ca) pub = Object.assign({}, S, { ca: Object.assign({}, S.ca, { pick: S.ca.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
+  if (S.phase === 'playing' && S.el) pub = Object.assign({}, S, { el: Object.assign({}, S.el, { pick: S.el.pick.map(v => (Array.isArray(v) ? 1 : v)) }) });
   if (S.phase === 'playing' && S.sh) pub = Object.assign({}, S, { sh: Object.assign({}, S.sh, { it: null }) });
   if (S.phase === 'playing' && S.jk) pub = Object.assign({}, S, { jk: Object.assign({}, S.jk, { pick: S.jk.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
   const j = JSON.stringify({ t: 'state', s: pub });
@@ -1101,7 +1175,7 @@ function act(msg) {
 function unseat() {
   S.members.forEach(m => { if (m.seat && colorOf(m.cid)) m.role = 'p' + m.seat; delete m.seat; });
 }
-function noFirst() { return S.game === 'janken' || S.game === 'charge'; }
+function noFirst() { return S.game === 'janken' || S.game === 'charge' || S.game === 'energy'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
 function pickHTML() {
   if (!me.isHost || !S || S.phase !== 'playing' || !S.pre) return '';
@@ -1136,8 +1210,8 @@ function startGame() {
   if (noFirst()) S.sg = (S.sg || 0) + 1;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, sh: S.game === 'search' ? sgInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
-  if (S.hb || S.jk || S.ca || S.pre) S.turn = 0;
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, sh: S.game === 'search' ? sgInit(S.np) : null, el: S.game === 'energy' ? elInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
+  if (S.hb || S.jk || S.ca || S.el || S.pre) S.turn = 0;
   broadcast();
 }
 function setNp(n) {
@@ -1357,6 +1431,32 @@ function dBoardHTML() {
   if (k && k.ok) h += dShapeSVG(d);
   return h + '</div>';
 }
+function elCand() {
+  const d = S.el, my = colorOf(me.cid), p = ui.elPath || [];
+  if (S.phase !== 'playing' || !my || !d.alive[my] || d.pick[my] || ui.offline || 10 * p.length > d.en[my] || p.length >= 6) return [];
+  return elAdj(d.R, p.length ? p[p.length - 1] : d.pos[my]).filter(x => x >= 0 && !d.tr[x] && !p.includes(x));
+}
+function elBoardHTML() {
+  const d = S.el, R = d.R, W = 2 * R + 1, my = colorOf(me.cid), s = 10, L = d.log;
+  const mvk = (S.gno || 0) + ':' + (S.mv || 0), lk = d.gid + ':' + (L ? L.n : 0);
+  if (!ui.elP || ui.elP.key !== lk) ui.elP = { key: lk, mv: mvk };
+  const anim = L && ui.elP.mv === mvk, st = {};
+  if (anim) L.mv.forEach(m => { st[m[0]] = m[2]; });
+  const path = ui.elPath, cand = elCand(), xy = i => { const a = elQR(R, i); return [s * 1.732 * (a[0] + a[1] / 2), s * 1.5 * a[1]]; };
+  let cells = '', marks = '';
+  for (let i = 0; i < W * W; i++) {
+    const a = elQR(R, i);
+    if (elIdx(R, a[0], a[1]) < 0) continue;
+    const c = xy(i), o = d.tr[i], k = path.indexOf(i);
+    const pts = [0, 1, 2, 3, 4, 5].map(n => (c[0] + s * .95 * Math.cos((30 + 60 * n) * Math.PI / 180)).toFixed(2) + ',' + (c[1] + s * .95 * Math.sin((30 + 60 * n) * Math.PI / 180)).toFixed(2)).join(' ');
+    cells += `<polygon class="hx z${elGain(R, i)}${o ? ' tr c' + o : ''}${cand.includes(i) ? ' cand' : ''}${k >= 0 ? ' sel' : ''}${st[i] !== undefined ? ' nw' : ''}" style="--st:${st[i] || 0}" points="${pts}" data-act="elcell" data-i="${i}"/>`;
+    if (k >= 0) marks += `<text class="eltx" x="${c[0].toFixed(2)}" y="${c[1].toFixed(2)}">${k + 1}</text>`;
+  }
+  for (let p = 1; p <= NP(); p++) { const c = xy(d.pos[p]); marks += `<circle class="elhd c${p}${d.alive[p] ? '' : ' dd'}" style="--st:${anim ? L.steps : 0}" cx="${c[0].toFixed(2)}" cy="${c[1].toFixed(2)}" r="${s * .5}"/>`; }
+  if (anim) L.cr.forEach(m => { const c = xy(m[1]); marks += `<text class="crx" style="--st:${m[2]}" x="${c[0].toFixed(2)}" y="${c[1].toFixed(2)}">✕</text>`; });
+  const hw = s * 1.732 * (R + .6), hh = s * (1.5 * R + 1.1);
+  return `<svg class="el" viewBox="${(-hw).toFixed(1)} ${(-hh).toFixed(1)} ${(2 * hw).toFixed(1)} ${(2 * hh).toFixed(1)}">${cells}${marks}</svg><p class="dcgoal">ENERGY ZONE ■ 外側2周 +0 ／ +2 ／ +4 ／ 中央 +8</p>`;
+}
 function sgBoardHTML() {
   const d = S.sh, my = colorOf(me.cid), over = S.phase === 'result', can = !over && my && S.turn === my && !ui.offline;
   const mv = (S.gno || 0) + ':' + (S.mv || 0);
@@ -1556,6 +1656,7 @@ function boardHTML() {
   if (S.game === 'charge') return caBoardHTML();
   if (S.game === 'dice') return dcBoardHTML();
   if (S.game === 'search') return sgBoardHTML();
+  if (S.game === 'energy') return elBoardHTML();
   if (GAMES[S.game].dk) return dBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
@@ -1588,9 +1689,15 @@ function msgHTML() {
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', search: S.sh ? S.sh.sc.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v + '点').join(' ／ ') : '', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', energy: S.winner ? '最後まで走り続けました' : '全員がクラッシュしました', search: S.sh ? S.sh.sc.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v + '点').join(' ／ ') : '', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
+  }
+  if (S.game === 'energy') {
+    const d = S.el, n = (ui.elPath || []).length;
+    const m = !my ? '観戦中' : !d.alive[my] ? 'クラッシュしました — 観戦中' : d.pick[my] ? 'ほかのプレイヤーを待っています…' : '進むルートを選んでください';
+    const sub = my && d.alive[my] && !d.pick[my] ? (n ? `${n}マス進む（エナジー -${10 * (n - 1)}）。最後のマスをタップすると1つ戻せます` : '光っているマスを順にタップ。1マス目は無料、2マス目からは1マスごとにエナジー10') : `ターン ${d.n + 1}`;
+    return `<div class="msg">${m}<small>${sub}</small></div>`;
   }
   if (S.game === 'charge') {
     const g = S.ca, m = !my ? '観戦中' : g.pick[my] >= 0 ? '相手が出すのを待っています…' : 'コマンドを選んでください';
@@ -1624,6 +1731,7 @@ function msgHTML() {
 }
 function mainHTML() {
   if ((S.jk || S.ca) && S.phase !== 'lobby') jSync();
+  if (S.el && S.phase !== 'lobby' && ui.elN !== S.el.gid + ':' + S.el.n) { ui.elN = S.el.gid + ':' + S.el.n; ui.elPath = []; }
   const host = me.isHost, my = colorOf(me.cid);
   if (S.phase === 'lobby') {
     const ready = allSet(), modes = GAMES[S.game].modes;
@@ -1643,7 +1751,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c}${S.dt && !S.dt.alive[c] ? ' out' : ''} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && (ui.jkHold || ui.jkPop))) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : S.sh ? `<b>${S.sh.sc[c]}点</b>` : S.dc ? `<b>${S.dc.sc[c]}</b>` : S.dt && !S.dt.alive[c] ? '<b class="gh">失格</b>' : ''}</div>`;
+  const pl = c => `<div class="pl c${c}${(S.dt && !S.dt.alive[c]) || (S.el && !S.el.alive[c]) ? ' out' : ''} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && (ui.jkHold || ui.jkPop))) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : S.el ? `<b>${S.el.alive[c] ? (S.el.pick[c] && S.phase === 'playing' ? '✓ ' : '') + 'EN ' + S.el.en[c] : 'OUT'}</b>` : S.sh ? `<b>${S.sh.sc[c]}点</b>` : S.dc ? `<b>${S.dc.sc[c]}</b>` : S.dt && !S.dt.alive[c] ? '<b class="gh">失格</b>' : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -1696,6 +1804,7 @@ function mainHTML() {
         <button class="put" data-act="qput" ${ok ? '' : 'disabled'}>${ui.qa >= 0 && !ok ? 'ここには置けません' : 'ここに置く'}</button>
       </div>` : '');
     }
+    if (S.game === 'energy' && my && S.el.alive[my] && !S.el.pick[my] && !ui.offline) { const n = (ui.elPath || []).length; pad = `<div class="pad"><button class="wide" data-act="elundo" ${n ? '' : 'disabled'}>1マス戻す</button><button class="put" data-act="elgo" ${n ? '' : 'disabled'}>${n > 1 ? '決定する（EN -' + 10 * (n - 1) + '）' : '決定する'}</button></div>`; }
     if (S.game === 'dice' && my && S.turn === my && !ui.offline) pad = `<div class="pad"><button class="wide" data-act="dcroll">サイコロを振る</button><button class="put" data-act="dcbank" ${S.dc.pot ? '' : 'disabled'}>確定する${S.dc.pot ? '（+' + S.dc.pot + '）' : ''}</button></div>`;
     if (my && NP() === 2) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
     if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択に戻る</button>`;
@@ -1868,6 +1977,18 @@ function fxAfter() {
   ui.fxNew = false;
   const g = S.game, q = s => document.querySelector(s);
   if (g === 'janken' || g === 'charge') return;
+  if (g === 'energy') {
+    const L = S.el.log, key = S.el.gid + ':' + (L ? L.n : 0);
+    if (!L || ui.elFx === key) { sfx('ready'); return; }
+    ui.elFx = key;
+    for (let k = 0; k < L.steps; k++) setTimeout(() => sfx('place', 1.2 + k * .14), k * 220);
+    L.cr.forEach(m => setTimeout(() => {
+      sfx('clash'); flash(); vib([30, 40, 80]);
+      const e = q('.hx[data-i="' + m[1] + '"]'), r = e && e.getBoundingClientRect();
+      if (r) burst(r.left + r.width / 2, r.top + r.height / 2, r.width * .8, ['#fff', 'var(--cy)', 'var(--mg)', 'var(--p3)', 'var(--p4)'][m[0]], 18, 1.5);
+    }, m[2] * 220 + 120));
+    return;
+  }
   if (g === 'search') {
     const e = S.sh.ev, el = q('.sgc.last'), r = el && el.getBoundingClientRect();
     if (!e) { sfx('tap'); return; }
@@ -1986,7 +2107,7 @@ function fxResult() {
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
-  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', search: 'COMPLETE', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', search: 'COMPLETE', energy: 'CRASH', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
 }
 function finHTML() {
   if (!FIN()) return '';
@@ -2074,6 +2195,20 @@ document.addEventListener('click', e => {
     if (cl) { const p = cl.indexOf(i); if (p >= 0) cl.splice(p, 1); else if (cl.length < 3) cl.push(i); }
     else ui.dSel = ui.dSel === i ? -1 : i;
     render();
+  }
+  else if (a === 'elcell') {
+    const i = Number(el.dataset.i), p = ui.elPath || (ui.elPath = []);
+    if (elCand().includes(i)) { p.push(i); sfx('flip', 1 + p.length * .1); render(); }
+    else if (p.length && p[p.length - 1] === i && !S.el.pick[colorOf(me.cid)]) { p.pop(); render(); }
+  }
+  else if (a === 'elundo') { if (ui.elPath && ui.elPath.length) { ui.elPath.pop(); render(); } }
+  else if (a === 'elgo') {
+    const d = S.el, my = colorOf(me.cid), p = ui.elPath || [];
+    if (my && p.length && !d.pick[my]) {
+      let cur = d.pos[my], code = 0, mul = 1;
+      p.forEach(x => { code += (elAdj(d.R, cur).indexOf(x) + 1) * mul; mul *= 7; cur = x; });
+      act({ t: 'move', i: 100000000 + code }); render();
+    }
   }
   else if (a === 'sgopen') act({ t: 'move', i: 90000 + Number(el.dataset.i) });
   else if (a === 'dcroll') act({ t: 'move', i: 80000 });
