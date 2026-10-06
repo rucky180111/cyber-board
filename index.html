@@ -172,6 +172,8 @@ input:focus{border-color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.4)}
 .vs.four{grid-template-columns:1fr 1fr}
 .modes{display:flex;gap:10px;margin-top:12px}
 .modes button{flex:1;background:#03050d;border:1px solid var(--line);color:var(--dim);padding:10px;font-family:inherit;font-weight:700;cursor:pointer}
+.modes.first{flex-wrap:wrap}
+.modes.first button{min-width:28%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .modes button.on{border-color:var(--cy);color:var(--cy);box-shadow:0 0 12px rgba(0,240,255,.35)}
 .modes button:disabled{cursor:default}
 .vs>span{font-family:var(--disp);font-weight:900;color:var(--dim)}
@@ -815,6 +817,7 @@ function hostInit() {
         board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
 }
 function broadcast() {
+  if (S.phase === 'lobby') unseat();
   if (S.phase === 'result' && !S.counted) { recordStats(); S.counted = true; }
   let pub = S;
   if (S.phase === 'playing' && S.hb) pub = Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) });
@@ -833,8 +836,23 @@ function act(msg) {
   if (me.isHost) handle(me.cid, msg);
   else if (net && net.up) net.up(msg);
 }
+function unseat() {
+  S.members.forEach(m => { if (m.seat && colorOf(m.cid)) m.role = 'p' + m.seat; delete m.seat; });
+}
+function noFirst() { return S.game === 'janken' || S.game === 'charge'; }
+function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
+function firstHTML(host) {
+  if (noFirst()) return '';
+  const n = NP(), f = S.first >= 1 && S.first <= n ? S.first : 'r';
+  return `<div class="modes first">${Array.from({ length: n }, (_, k) => { const m = seatMember(k + 1); return `<button class="${f === k + 1 ? 'on' : ''}" data-act="first" data-f="${k + 1}" ${host ? '' : 'disabled'}>${m ? esc(m.name) : (k + 1) + 'P'} 先手</button>`; }).join('')}<button class="${f === 'r' ? 'on' : ''}" data-act="first" data-f="r" ${host ? '' : 'disabled'}>ランダム</button></div>`;
+}
 function startGame() {
+  unseat();
   if (!allSet()) return;
+  if (!noFirst()) {
+    const n = NP(), f = S.first >= 1 && S.first <= n ? S.first : 1 + Math.floor(Math.random() * n);
+    S.members.forEach(m => { const k = colorOf(m.cid); if (k) { m.seat = k; m.role = 'p' + ((k - f + n) % n + 1); } });
+  }
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
                      q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
@@ -1021,7 +1039,7 @@ function entryHTML() {
 }
 function slotHTML(role) {
   const m = memberOf(role), c = Number(role[1]);
-  return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${CN[c]} / ${NP() === 2 ? (c === 1 ? '先手' : '後手') : c + '番手'}</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
+  return `<div class="slot c${c} ${m ? '' : 'empty'}"><small>${c}P</small><div>${m ? esc(m.name) : '未選択'}</div></div>`;
 }
 function dShapeSVG(d) {
   const n = d.n, r = d.own.length / n, q = d.claim.pts.map(i => [i % n + .5, Math.floor(i / n) + .5]);
@@ -1282,6 +1300,7 @@ function mainHTML() {
       <p class="note">${host ? `メンバー一覧で対戦する${NP()}人を選んでください。それ以外の人は観戦になります。` : 'ホストがゲームと対戦者を選んでいます…'}</p>
       ${NP() === 2 ? `<div class="vs">${slotHTML('p1')}<span>VS</span>${slotHTML('p2')}</div>`
                    : `<div class="vs four">${Array.from({ length: NP() }, (_, k) => slotHTML('p' + (k + 1))).join('')}</div>`}
+      ${noFirst() ? '' : `<h2>03 // FIRST MOVE</h2>${firstHTML(host)}`}
       ${host ? `<button class="btn primary big" data-act="start" ${ready ? '' : 'disabled'}>GAME START</button>` : ''}
     </section>`;
   }
@@ -1343,8 +1362,8 @@ function mainHTML() {
     if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択へ</button>`;
   } else if (host) {
     btn += `<button class="btn sm primary" data-act="lobby">次のゲームを選ぶ</button>
-            <button class="btn sm" data-act="start">同じ組み合わせで再戦</button>
-            <button class="btn sm mg" data-act="swap">${NP() === 2 ? '先手後手を入れ替えて再戦' : '順番をずらして再戦'}</button>`;
+            <button class="btn sm" data-act="start">再戦する</button>`;
+    pad += firstHTML(true);
   } else btn = `<p class="note">ホストが次のゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
@@ -1367,7 +1386,7 @@ function sideHTML() {
     const badge = c ? `<b class="badge c${c}">${CN[c]}</b>` : `<b class="badge spec">観戦</b>`;
     const tag = m.host ? '<b class="tag">HOST</b>' : host ? `<button class="tag kick" data-act="kick" data-cid="${esc(m.cid)}">KICK</button>` : '';
     const ctl = host && lobby ? `<div class="roles">
-        ${Array.from({ length: NP() }, (_, k) => `<button class="r${k + 1} ${c === k + 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p${k + 1}">${NP() === 2 ? (k ? '後手' : '先手') : 'P' + (k + 1)}</button>`).join('')}
+        ${Array.from({ length: NP() }, (_, k) => `<button class="r${k + 1} ${c === k + 1 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="p${k + 1}">${k + 1}P</button>`).join('')}
         <button class="r0 ${c === 0 ? 'on' : ''}" data-act="role" data-cid="${esc(m.cid)}" data-role="spec">観戦</button>
         ${''}
       </div>` : '';
@@ -1532,7 +1551,7 @@ document.addEventListener('click', e => {
     if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
   }
   else if (a === 'start') startGame();
-  else if (a === 'swap') { if (allSet()) { const n = NP(); S.members.forEach(m => { const k = colorOf(m.cid); if (k) m.role = 'p' + (k % n + 1); }); startGame(); } }
+  else if (a === 'first') { if (!me.isHost) return; S.first = el.dataset.f === 'r' ? 'r' : Number(el.dataset.f); broadcast(); }
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
 });
 document.addEventListener('keydown', e => {
