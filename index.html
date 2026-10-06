@@ -216,6 +216,22 @@ button:not(:disabled):active{transform:scale(.95)}
 .tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
+.sg{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));gap:3px;width:min(100%,460px);aspect-ratio:1;margin:10px auto 8px}
+.sgc{position:relative;min-width:0;min-height:0;overflow:hidden;line-height:1;padding:0;border:1px solid rgba(0,240,255,.4);background:linear-gradient(135deg,#0c1b3a,#060c20);box-shadow:inset 0 0 8px rgba(0,240,255,.12);cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:900;font-size:clamp(14px,4.4vw,22px);color:var(--tx)}
+.sgc:disabled{cursor:default}
+.sgc.op{background:#02040b;border-color:rgba(0,240,255,.1);box-shadow:none}
+.sgc.last{border-color:#fff}
+@media(hover:hover){.sgc:not(:disabled):hover{border-color:var(--yl);background:rgba(246,255,0,.12)}}
+.sgc .n1{color:var(--cy)}.sgc .n2{color:var(--p3)}.sgc .n3{color:var(--yl)}.sgc .n4{color:var(--p4)}.sgc .n5{color:var(--mg)}
+.gem{width:66%;height:66%;display:flex;align-items:center;justify-content:center;background:currentColor;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);border:0}
+.gem.v2{width:74%;height:74%;clip-path:polygon(25% 4%,75% 4%,100% 50%,75% 96%,25% 96%,0 50%)}
+.gem.v3{width:86%;height:86%;clip-path:polygon(50% 0,62% 34%,98% 35%,69% 57%,79% 91%,50% 71%,21% 91%,31% 57%,2% 35%,38% 34%)}
+.gem u{text-decoration:none;color:#03050d;font-size:.62em}
+.gem.un{color:var(--dim);opacity:.45}
+.sgc:has(.gem.v3:not(.un)){filter:drop-shadow(0 0 6px var(--yl))}
+.fx .sgc.nw{animation:sgopen .32s ease-out calc(var(--fd,0) * 45ms) both}
+@keyframes sgopen{0%{background:var(--cy);filter:brightness(3);transform:scale(.6)}}
+.fx .sgc.nw .gem{animation:finpop .45s cubic-bezier(.2,1.8,.4,1) .12s both}
 .dc{max-width:520px;margin:10px auto 0;display:grid;gap:8px}
 .dcrow{display:grid;grid-template-columns:minmax(0,5.5em) 1fr 2.2em 2.8em;gap:8px;align-items:center;opacity:.55;border:0}
 .dcrow.act{opacity:1}
@@ -571,10 +587,11 @@ const GAMES = {
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
+  search: { name: 'サーチ＆ゲット', size: 1, modes: [2, 3, 4], desc: '8×8のマスを順番に開けてチップを探す。見つけたら得点してもう1回、外れたら周り8マスにあるチップの数が出て交代。チップは1〜3点で、合計点の多い人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
-const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice'];
+const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice', 'search'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
@@ -901,6 +918,43 @@ function rForbidden(b, x, y, depth) {
   return r;
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
+function sgInit(np) { return { n: 8, op: new Array(64).fill(-1), it: null, sc: new Array(np + 1).fill(0), left: 21, cnt: 15, ev: null, gid: Math.random().toString(36).slice(2, 8) }; }
+function sgAdj(k) {
+  const x = k % 8, y = (k - x) / 8, r = [];
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && x + dx >= 0 && x + dx < 8 && y + dy >= 0 && y + dy < 8) r.push((y + dy) * 8 + x + dx);
+  return r;
+}
+function sgApply(s, i, c) {
+  const d = s.sh, np = s.np, k = i - 90000;
+  if (s.phase !== 'playing' || !d || !c || s.turn !== c || !Number.isInteger(k) || k < 0 || k > 63 || d.op[k] !== -1) return false;
+  if (!d.it) {
+    const ban = new Set(sgAdj(k).concat(k)), pool = [];
+    for (let q = 0; q < 64; q++) if (!ban.has(q)) pool.push(q);
+    for (let q = pool.length - 1; q > 0; q--) { const r = Math.floor(Math.random() * (q + 1)), z = pool[q]; pool[q] = pool[r]; pool[r] = z; }
+    d.it = new Array(64).fill(0);
+    [3, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1].forEach((v, q) => { d.it[pool[q]] = v; });
+  }
+  s.last = k;
+  const v = d.it[k];
+  if (v) {
+    d.op[k] = 100 + c * 10 + v; d.sc[c] += v; d.left -= v; d.cnt--; d.ev = { k, hit: v, by: c, n: 1 };
+    const o = d.sc.slice(1).sort((a, b) => b - a);
+    if (!d.cnt || o[0] > o[1] + d.left) { const top = o[0], w = []; for (let p = 1; p <= np; p++) if (d.sc[p] === top) w.push(p); finish(s, w.length === 1 ? w[0] : 0, 'search'); }
+    return true;
+  }
+  const st = [k];
+  let n = 0;
+  while (st.length) {
+    const q = st.pop();
+    if (d.op[q] !== -1) continue;
+    const a = sgAdj(q), m = a.filter(z => d.it[z]).length;
+    d.op[q] = m; n++;
+    if (!m) a.forEach(z => { if (d.op[z] === -1) st.push(z); });
+  }
+  d.ev = { k, hit: 0, by: c, n };
+  s.turn = c % np + 1;
+  return true;
+}
 function dcInit(np) { return { sc: new Array(np + 1).fill(0), pot: 0, die: 0, n: 0, bust: 0, bank: 0, by: 0, rank: [], pos: new Array(np + 1).fill(0), pend: [], goal: 50 }; }
 function dcNext(d, c, np) { for (let k = 0; k < np; k++) { c = c % np + 1; if (!d.pos[c] && !d.pend.includes(c)) return c; } return 0; }
 function dcPass(s, c) {
@@ -944,6 +998,7 @@ function applyMove(s, i, c) {
   if (s.game === 'janken') return jApply(s, i, c);
   if (s.game === 'charge') return caApply(s, i, c);
   if (s.game === 'dice') return dcApply(s, i, c);
+  if (s.game === 'search') return sgApply(s, i, c);
   if (GAMES[s.game] && GAMES[s.game].dk) return dApply(s, i, c);
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
@@ -1028,6 +1083,7 @@ function broadcast() {
   let pub = S;
   if (S.phase === 'playing' && S.hb) pub = Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) });
   if (S.phase === 'playing' && S.ca) pub = Object.assign({}, S, { ca: Object.assign({}, S.ca, { pick: S.ca.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
+  if (S.phase === 'playing' && S.sh) pub = Object.assign({}, S, { sh: Object.assign({}, S.sh, { it: null }) });
   if (S.phase === 'playing' && S.jk) pub = Object.assign({}, S, { jk: Object.assign({}, S.jk, { pick: S.jk.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
   const j = JSON.stringify({ t: 'state', s: pub });
   if (net && net.connected) net.publish(TOPIC + me.code + '/state', j, { retain: true, qos: 1 });
@@ -1080,7 +1136,7 @@ function startGame() {
   if (noFirst()) S.sg = (S.sg || 0) + 1;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, sh: S.game === 'search' ? sgInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
   if (S.hb || S.jk || S.ca || S.pre) S.turn = 0;
   broadcast();
 }
@@ -1301,6 +1357,21 @@ function dBoardHTML() {
   if (k && k.ok) h += dShapeSVG(d);
   return h + '</div>';
 }
+function sgBoardHTML() {
+  const d = S.sh, my = colorOf(me.cid), over = S.phase === 'result', can = !over && my && S.turn === my && !ui.offline;
+  const mv = (S.gno || 0) + ':' + (S.mv || 0);
+  if (!ui.sgP || ui.sgP.gid !== d.gid) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: null };
+  else if (ui.sgP.mv !== mv) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: ui.sgP.op };
+  const prev = ui.sgP.prev, lx = S.last % 8, ly = Math.floor(S.last / 8);
+  const gem = (v, cls) => `<i class="gem v${v} ${cls}"><u>${v}</u></i>`;
+  let h = '<div class="sg">';
+  for (let i = 0; i < 64; i++) {
+    const o = d.op[i], nw = prev && prev[i] === -1 && o !== -1, fd = Math.max(Math.abs(i % 8 - lx), Math.abs(Math.floor(i / 8) - ly));
+    const body = o >= 100 ? gem(o % 10, 'c' + Math.floor((o - 100) / 10)) : o > 0 ? `<b class="n${Math.min(o, 5)}">${o}</b>` : o === -1 && over && d.it && d.it[i] ? gem(d.it[i], 'un') : '';
+    h += `<button class="sgc${o === -1 ? '' : ' op'}${nw ? ' nw' : ''}${i === S.last ? ' last' : ''}" style="--fd:${fd}" data-act="sgopen" data-i="${i}" ${can && o === -1 ? '' : 'disabled'} aria-label="${i % 8 + 1},${Math.floor(i / 8) + 1}">${body}</button>`;
+  }
+  return h + `</div><p class="dcgoal">CHIP ${d.cnt} / 15 ■ 残り ${d.left}点</p>`;
+}
 const PIP = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 function dcBoardHTML() {
   const d = S.dc, who = d.by || S.turn || 1, pc = v => Math.min(100, v / d.goal * 100).toFixed(1);
@@ -1484,6 +1555,7 @@ function boardHTML() {
   if (S.game === 'janken') return jBoardHTML();
   if (S.game === 'charge') return caBoardHTML();
   if (S.game === 'dice') return dcBoardHTML();
+  if (S.game === 'search') return sgBoardHTML();
   if (GAMES[S.game].dk) return dBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
@@ -1516,7 +1588,7 @@ function msgHTML() {
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', search: S.sh ? S.sh.sc.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v + '点').join(' ／ ') : '', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
   }
@@ -1544,6 +1616,7 @@ function msgHTML() {
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップして選び、「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
     : GAMES[S.game].dk ? '<small>マスをタップして選び、「ここに打つ」で確定。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
+    : S.game === 'search' ? '<small>マスをタップして開けます。チップを見つけたらもう1回。数字は周り8マスにあるチップの数です</small>'
     : S.game === 'dice' ? (S.dc.pend.length ? `<small>${S.dc.pend.map(c => esc(nameOf(c)) + ' ' + S.dc.sc[c] + '点').join('、')} でゴール済み。この周のうちに上回れば逆転できます</small>` : '<small>振るたびに点が貯まります。1が出ると、このターンの点は没収です</small>')
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1570,7 +1643,7 @@ function mainHTML() {
     </section>`;
   }
   const rev = S.game === 'reversi';
-  const pl = c => `<div class="pl c${c}${S.dt && !S.dt.alive[c] ? ' out' : ''} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && (ui.jkHold || ui.jkPop))) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : S.dc ? `<b>${S.dc.sc[c]}</b>` : S.dt && !S.dt.alive[c] ? '<b class="gh">失格</b>' : ''}</div>`;
+  const pl = c => `<div class="pl c${c}${S.dt && !S.dt.alive[c] ? ' out' : ''} ${S.turn === c || (S.winner === c && !((S.jk || S.ca) && (ui.jkHold || ui.jkPop))) ? 'act' : ''}"><i class="dot"></i><span>${esc(nameOf(c))}</span>${rev ? `<b>${count(S.board, c)}</b>` : S.q ? `<b>壁${S.q.walls[c]}</b>` : S.g ? `<b class="gh">小${S.g.hand[c][0]} 中${S.g.hand[c][1]} 大${S.g.hand[c][2]}</b>` : S.jk ? `<b>${jSc(c)}点</b>` : S.ca ? `<b>EN ${caEn(c)}</b>` : S.sh ? `<b>${S.sh.sc[c]}点</b>` : S.dc ? `<b>${S.dc.sc[c]}</b>` : S.dt && !S.dt.alive[c] ? '<b class="gh">失格</b>' : ''}</div>`;
   let btn = '', pad = '';
   if (S.phase === 'playing') {
     if (S.game === 'gomoku' && my && S.turn === my && !ui.offline) {
@@ -1795,6 +1868,16 @@ function fxAfter() {
   ui.fxNew = false;
   const g = S.game, q = s => document.querySelector(s);
   if (g === 'janken' || g === 'charge') return;
+  if (g === 'search') {
+    const e = S.sh.ev, el = q('.sgc.last'), r = el && el.getBoundingClientRect();
+    if (!e) { sfx('tap'); return; }
+    if (e.hit) {
+      sfx('ping', .9 + e.hit * .25); if (e.hit > 1) setTimeout(() => sfx('ping', 1.3 + e.hit * .25), 110);
+      if (e.hit === 3) { sfx('clash'); flash(); vib([30, 40, 80]); } else vib(20);
+      if (r) burst(r.left + r.width / 2, r.top + r.height / 2, r.width * .7, ['#fff', 'var(--cy)', 'var(--mg)', 'var(--p3)', 'var(--p4)'][e.by], 6 + e.hit * 6, e.hit === 3 ? 1.6 : 1);
+    } else { sfx('place', 1.6); for (let k = 1; k < Math.min(e.n, 9); k++) setTimeout(() => sfx('flip', .9 + k * .07), k * 45); }
+    return;
+  }
   if (g === 'dice') {
     const d = S.dc, e = q('.dcdie'), r = e && e.getBoundingClientRect();
     if (d.bust) { sfx('wall'); sfx('place', .6); vib([30, 40, 60]); }
@@ -1903,7 +1986,7 @@ function fxResult() {
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
-  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', search: 'COMPLETE', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
 }
 function finHTML() {
   if (!FIN()) return '';
@@ -1992,6 +2075,7 @@ document.addEventListener('click', e => {
     else ui.dSel = ui.dSel === i ? -1 : i;
     render();
   }
+  else if (a === 'sgopen') act({ t: 'move', i: 90000 + Number(el.dataset.i) });
   else if (a === 'dcroll') act({ t: 'move', i: 80000 });
   else if (a === 'dcbank') act({ t: 'move', i: 80001 });
   else if (a === 'dput') { const i = ui.dSel; if (i >= 0) { ui.dSel = -1; act({ t: 'move', i: 50000 + i }); render(); } }
