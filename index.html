@@ -587,7 +587,7 @@ const GAMES = {
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
-  search: { name: 'サーチ＆ゲット', size: 1, modes: [2, 3, 4], desc: '8×8のマスを順番に開けてチップを探す。見つけたら得点してもう1回、外れたら周り8マスにあるチップの数が出て交代。チップは1〜3点で、合計点の多い人の勝ち。' },
+  search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '8×8のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
@@ -1370,7 +1370,7 @@ function sgBoardHTML() {
     const body = o >= 100 ? gem(o % 10, 'c' + Math.floor((o - 100) / 10)) : o > 0 ? `<b class="n${Math.min(o, 5)}">${o}</b>` : o === -1 && over && d.it && d.it[i] ? gem(d.it[i], 'un') : '';
     h += `<button class="sgc${o === -1 ? '' : ' op'}${nw ? ' nw' : ''}${i === S.last ? ' last' : ''}" style="--fd:${fd}" data-act="sgopen" data-i="${i}" ${can && o === -1 ? '' : 'disabled'} aria-label="${i % 8 + 1},${Math.floor(i / 8) + 1}">${body}</button>`;
   }
-  return h + `</div><p class="dcgoal">CHIP ${d.cnt} / 15 ■ 残り ${d.left}点</p>`;
+  return h + `</div><p class="dcgoal">CRYSTAL ${d.cnt} / 15 ■ 残り ${d.left}点</p>`;
 }
 const PIP = [[], [4], [0, 8], [0, 4, 8], [0, 2, 6, 8], [0, 2, 4, 6, 8], [0, 2, 3, 5, 6, 8]];
 function dcBoardHTML() {
@@ -1616,7 +1616,7 @@ function msgHTML() {
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップして選び、「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
     : GAMES[S.game].dk ? '<small>マスをタップして選び、「ここに打つ」で確定。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
-    : S.game === 'search' ? '<small>マスをタップして開けます。チップを見つけたらもう1回。数字は周り8マスにあるチップの数です</small>'
+    : S.game === 'search' ? '<small>マスをタップして開けます。クリスタルを見つけたらもう1回。数字は周り8マスにあるクリスタルの数です</small>'
     : S.game === 'dice' ? (S.dc.pend.length ? `<small>${S.dc.pend.map(c => esc(nameOf(c)) + ' ' + S.dc.sc[c] + '点').join('、')} でゴール済み。この周のうちに上回れば逆転できます</small>` : '<small>振るたびに点が貯まります。1が出ると、このターンの点は没収です</small>')
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1630,7 +1630,7 @@ function mainHTML() {
     return `<section class="panel">
       <h2>01 // SELECT GAME</h2>
       <div class="games">${GORDER.map(k => [k, GAMES[k]]).map(([k, v]) =>
-        `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name.replace('＆', '＆<wbr>').replace('ナイン', 'ナイン<wbr>')}</b><small>${!v.modes ? '2人' : v.modes.length > 2 ? '2〜4人' : v.modes.join('・') + '人'}</small></button>`).join('')}</div>
+        `<button class="game ${k === S.game ? 'on' : ''}" data-act="game" data-g="${k}" ${host ? '' : 'disabled'}><b>${v.name.replace('＆', '＆<wbr>').replace('ナイン', 'ナイン<wbr>').replace('サーチ', 'サーチ<wbr>')}</b><small>${!v.modes ? '2人' : v.modes.length > 2 ? '2〜4人' : v.modes.join('・') + '人'}</small></button>`).join('')}</div>
       <div class="ginfo"><b>${GAMES[S.game].name}</b><p>${GAMES[S.game].desc}</p></div>
       ${modes ? `<div class="modes">${modes.map(n => `<button class="${NP() === n ? 'on' : ''}" data-act="np" data-n="${n}" ${host ? '' : 'disabled'}>${n}人で対戦</button>`).join('')}</div>` : ''}
       ${GAMES[S.game].vars ? `<div class="modes">${GAMES[S.game].vars.map(v => `<button class="${(S.dv === 'ci' ? 'ci' : 'sq') === v[0] ? 'on' : ''}" data-act="dvar" data-v="${v[0]}" ${host ? '' : 'disabled'}>${v[1]}モード</button>`).join('')}</div>` : ''}
