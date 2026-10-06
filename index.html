@@ -788,7 +788,7 @@ const me = { cid: store.get('cb_cid', true) || rnd(12), name: store.get('cb_name
 store.set('cb_cid', me.cid, true);
 const ui = { screen: 'entry', status: '', error: '', offline: false, copied: false, sel: -1, qmode: 'move', qo: 'h', qa: -1, gs: null, hbIn: '', hbMine: null, statOpen: null, jkSel: -1, jkGid: null, jkSeen: 0, jkHold: 0, jkPop: 0, caSel: -1, caHelp: false, dSel: -1, dClaim: null };
 try { ui.hbMine = JSON.parse(store.get('cb_hb', true)); } catch (e) {}
-ui.fxOn = store.get('cb_fx') !== '0';
+ui.fxOn = true;
 ui.finUntil = 0;
 const JS0 = '<svg class="jc" viewBox="0 0 24 24" aria-hidden="true">';
 const JE = [
@@ -1439,7 +1439,6 @@ function fxOverlay() {
 function roomHTML() {
   fxTick();
   return `<header class="top"><h1 class="logo">CYBER<span>BOARD</span></h1>
-      <button class="fxtog${ui.fxOn ? ' on' : ''}" data-act="fxtog" aria-pressed="${ui.fxOn}">FX ${ui.fxOn ? 'ON' : 'OFF'}</button>
       <div class="room">ROOM<b>${esc(me.code)}</b></div></header>
     ${ui.offline ? `<div class="offline">${me.isHost ? '接続サーバーから切断されました。再接続中…' : 'ホストとの接続が切れました。再接続中…'}</div>` : ''}
     ${S.note && S.phase === 'lobby' ? `<div class="offline">${esc(S.note)}</div>` : ''}
