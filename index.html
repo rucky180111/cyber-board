@@ -746,6 +746,7 @@ function rForbidden(b, x, y, depth) {
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
 function applyMove(s, i, c) {
+  if (s.pre) return false;
   if (s.game === 'hitblow') return hApply(s, i, c);
   if (s.game === 'janken') return jApply(s, i, c);
   if (s.game === 'charge') return caApply(s, i, c);
@@ -827,6 +828,7 @@ function hostInit() {
         board: [], turn: 0, last: -1, line: null, winner: 0, why: '', passed: 0 };
 }
 function broadcast() {
+  if (S.phase !== 'playing') S.pre = 0;
   if (S.phase === 'lobby') unseat();
   if (S.phase === 'result' && !S.counted) { recordStats(); S.counted = true; }
   let pub = S;
@@ -839,7 +841,7 @@ function broadcast() {
   render();
 }
 function handle(cid, msg) {
-  if (msg.t === 'move') { if (applyMove(S, msg.i, colorOf(cid))) { S.mv = (S.mv || 0) + 1; broadcast(); } }
+  if (msg.t === 'move') { if (applyMove(S, msg.i, colorOf(cid))) { S.mv = (S.mv || 0) + 1; if (S.hb && S.phase === 'playing' && S.turn === 1 && !S.hb.fp) { S.pre = 1; S.turn = 0; } broadcast(); } }
   else if (msg.t === 'resign') { const c = colorOf(cid); if (S.phase === 'playing' && c) { finish(S, 3 - c, 'resign'); broadcast(); } }
 }
 function act(msg) {
@@ -852,13 +854,13 @@ function unseat() {
 function noFirst() { return S.game === 'janken' || S.game === 'charge'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
 function pickHTML() {
-  if (!ui.pick || !me.isHost || !S || S.phase === 'playing' || noFirst() || !allSet()) { ui.pick = false; return ''; }
-  return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">キャンセル</button></div></div>`;
+  if (!me.isHost || !S || S.phase !== 'playing' || !S.pre) return '';
+  return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>${S.hb ? '数字が出そろいました。' : ''}先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">中断してゲーム選択へ</button></div></div>`;
 }
 function fxStart() {
   if (!S) return;
-  const key = S.gno || 0;
-  if (S.phase !== 'playing' || (S.mv || 0) > 0) { ui.fxSt = key; return; }
+  const key = S.sg || 0;
+  if (ui.fxSt === undefined || S.phase !== 'playing') { ui.fxSt = key; return; }
   if (ui.fxSt === key) return;
   ui.fxSt = key;
   const o = document.createElement('div'), nf = noFirst();
@@ -867,17 +869,23 @@ function fxStart() {
   document.body.appendChild(o);
   setTimeout(() => o.remove(), 2000);
 }
-function startGame(first) {
+function pickFirst(first) {
+  if (!S.pre || S.phase !== 'playing') return;
+  const n = NP(), f = first >= 1 && first <= n ? first : 1 + Math.floor(Math.random() * n);
+  S.members.forEach(m => { const k = colorOf(m.cid); if (k) { m.seat = k; m.role = 'p' + ((k - f + n) % n + 1); } });
+  if (S.hb) { if (f === 2) { S.hb.sec = [null, S.hb.sec[2], S.hb.sec[1]]; S.hb.set = [0, S.hb.set[2], S.hb.set[1]]; } S.hb.fp = 1; }
+  S.pre = 0; S.turn = 1; S.sg = (S.sg || 0) + 1;
+  broadcast();
+}
+function startGame() {
   unseat();
   if (!allSet()) return;
-  if (!noFirst()) {
-    const n = NP(), f = first >= 1 && first <= n ? first : 1 + Math.floor(Math.random() * n);
-    S.members.forEach(m => { const k = colorOf(m.cid); if (k) { m.seat = k; m.role = 'p' + ((k - f + n) % n + 1); } });
-  }
+  S.pre = noFirst() || S.game === 'hitblow' ? 0 : 1;
+  if (noFirst()) S.sg = (S.sg || 0) + 1;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
                      q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
-  if (S.hb || S.jk || S.ca) S.turn = 0;
+  if (S.hb || S.jk || S.ca || S.pre) S.turn = 0;
   broadcast();
 }
 function setNp(n) {
@@ -1272,6 +1280,7 @@ function boardHTML() {
 function msgHTML() {
   const my = colorOf(me.cid);
   if ((S.jk || S.ca) && ui.jkHold) return '<div class="msg">READY</div>';
+  if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
     const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立' : '', miss: '指摘が外れて失格', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了' }[S.why] || '';
@@ -1570,9 +1579,9 @@ document.addEventListener('click', e => {
     const m = S.members.find(x => x.cid === el.dataset.cid);
     if (m && !m.host && confirm(m.name + ' をKICKしますか？' + (colorOf(m.cid) && S.phase === 'playing' ? ' 対局中のため、ゲームは中断されます。' : ''))) removeMember(m.cid, true);
   }
-  else if (a === 'start') { if (!me.isHost || !allSet()) return; if (noFirst()) startGame(); else { ui.pick = true; render(); } }
-  else if (a === 'pick') { if (!me.isHost) return; ui.pick = false; startGame(Number(el.dataset.f)); render(); }
-  else if (a === 'pickx') { ui.pick = false; render(); }
+  else if (a === 'start') { if (me.isHost) startGame(); }
+  else if (a === 'pick') { if (me.isHost) pickFirst(Number(el.dataset.f)); }
+  else if (a === 'pickx') { if (me.isHost) { S.phase = 'lobby'; broadcast(); } }
 
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
 });
