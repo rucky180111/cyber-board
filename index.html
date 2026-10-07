@@ -216,6 +216,9 @@ button:not(:disabled):active{transform:scale(.95)}
 .tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
+.pad.bjadj{align-items:center}
+.pad.bjadj button{flex:1;min-width:0;font-family:var(--disp);font-size:14px}
+.bjamt{flex:1.4;text-align:center;font-family:var(--disp);font-size:30px;color:var(--yl);text-shadow:0 0 12px var(--yl)}
 .bj{max-width:540px;margin:8px auto 0;display:grid;gap:8px}
 .bjrow{border:1px solid;padding:8px 10px;background:rgba(255,255,255,.02);opacity:.7}
 .bjrow.act,.bjrow.dealer{opacity:1}
@@ -1013,7 +1016,7 @@ function bjApply(s, i, c) {
   if (s.phase !== 'playing' || !d || !c || !Number.isInteger(i)) return false;
   if (d.ph === 'bet') {
     const a = i - 110000;
-    if (d.chips[c] <= 0 || d.bet[c] || a <= 0 || a > d.chips[c] || (a % 10 && a !== d.chips[c])) return false;
+    if (d.chips[c] <= 0 || d.bet[c] || a <= 0 || a > d.chips[c] || (a % 5 && a !== d.chips[c])) return false;
     d.bet[c] = a; d.n++; d.ev = { t: 'bet', c };
     for (let p = 1; p <= np; p++) if (d.chips[p] > 0 && !d.bet[p]) return true;
     for (let k = 0; k < 2; k++) { for (let p = 1; p <= np; p++) if (d.bet[p]) d.hands[p].push(bjDraw(d)); d.dl.push(bjDraw(d)); }
@@ -1325,7 +1328,7 @@ const RULES = {
   charge: { goal: 'アタックかビクトリーを決めて、相手を倒す。', how: ['毎ターン、お互いに5つのコマンドから1つ選んで同時に出す。エナジー（EN）1から始まる。', 'チャージ：EN+1。アタックを受けると負け。', 'アタック（EN1消費）：チャージ中の相手を倒す。バリアには防がれる。', 'バリア（消費なし）：アタックを防ぐ。', 'リバース（EN1消費）：相手のアタックとビクトリーを跳ね返して勝つ。それ以外には空振り。', 'ビクトリー（EN3消費）：即勝利。止められるのはリバースだけ。'], end: ['どちらかが倒れるまで続く。'], tip: ['アタック同士・ビクトリー同士は相打ちで続行。', 'ENが足りないコマンドは選べない。相手のENを見て手を読む。'] },
   dice: { goal: '点を貯めて、先に50点へ届く。', how: ['自分の番に「サイコロを振る」か「確定する」を選ぶ。', '振って出た目は、そのターンの点として貯まる。何回でも振れる。', '1が出ると、そのターンに貯めた点はすべて没収されて交代。', '「確定する」と、貯めた点が自分の得点に入って交代。'], end: ['50点以上で確定するとゴール。', '誰かがゴールしても、その周は最後の人まで続く。', '同じ周にゴールした人どうしは、点の高い方が上。同点は同順位。', '3人以上のときは、最後の1人が決まるまで続く。'], tip: ['50点を超えてからも振れる。相手より上を狙うか、確実に止めるか。'] },
   search: { goal: '隠れているクリスタルを見つけて、合計点を一番多く取る。', how: ['9×9の盤に、クリスタルが20個隠れている。', '自分の番に、マスを1つタップして開ける。', 'クリスタルがあれば得点して、もう1回開けられる。', 'なければ、周り8マスにあるクリスタルの数が出て交代。', 'クリスタルは、ひし形1点（14個）・六角形2点（5個）・星3点（1個）。'], end: ['全部見つかるか、逆転できない点差がついたら終了。', '合計点の多い人の勝ち。'], tip: ['数字を読めば、確実にある場所が分かる。', '最初の1手は必ず空きマス。'] },
-  blackjack: { goal: 'ディーラーに勝ってチップを増やす。最後にチップが一番多い人の勝ち。', how: ['全員100チップで始める。対戦相手はコンピューターのディーラーで、プレイヤーどうしは直接戦わない。', 'ラウンドの最初に、全員が賭けるチップを決める。', '全員に2枚ずつ表で配られる。ディーラーは1枚が表、1枚が伏せ。', '順番に「ヒット（1枚引く）」か「スタンド（止める）」を選ぶ。合計が22以上になるとバーストで負け。', '「ダブル」は最初の2枚のときだけ選べる。賭けを2倍にして、1枚だけ引いて止まる。', '全員が終わると、ディーラーが伏せ札を開け、合計17以上になるまで引く。', 'カードの数え方：2〜10は数字のまま、J・Q・Kは10、Aは1か11の都合のいい方。'], end: ['ディーラーより21に近ければ勝ち。賭けた分と同じだけもらえる。', 'ディーラーがバーストしたら、バーストしていない人は全員勝ち。', '同じ合計なら引き分け（PUSH）で、賭けは戻る。', '最初の2枚で21はブラックジャック。賭けの1.5倍もらえる。', 'チップが0になった人は脱落。', '山札が少なくなったら終了。チップの一番多い人の勝ち。'], tip: ['山札は2人なら52枚、3〜4人なら104枚。途中で混ぜ直さない。', '出たカードを覚えておくと、残りに10や絵札が多いかどうかが分かる。'] },
+  blackjack: { goal: 'ディーラーに勝ってチップを増やす。最後にチップが一番多い人の勝ち。', how: ['全員100チップで始める。対戦相手はコンピューターのディーラーで、プレイヤーどうしは直接戦わない。', 'ラウンドの最初に、全員が賭けるチップを決める。5チップ単位で自由に決められ、持っている分を全部賭けることもできる。', '全員に2枚ずつ表で配られる。ディーラーは1枚が表、1枚が伏せ。', '順番に「ヒット（1枚引く）」か「スタンド（止める）」を選ぶ。合計が22以上になるとバーストで負け。', '「ダブル」は最初の2枚のときだけ選べる。賭けを2倍にして、1枚だけ引いて止まる。', '全員が終わると、ディーラーが伏せ札を開け、合計17以上になるまで引く。', 'カードの数え方：2〜10は数字のまま、J・Q・Kは10、Aは1か11の都合のいい方。'], end: ['ディーラーより21に近ければ勝ち。賭けた分と同じだけもらえる。', 'ディーラーがバーストしたら、バーストしていない人は全員勝ち。', '同じ合計なら引き分け（PUSH）で、賭けは戻る。', '最初の2枚で21はブラックジャック。賭けの1.5倍もらえる。', 'チップが0になった人は脱落。', '山札が少なくなったら終了。チップの一番多い人の勝ち。'], tip: ['山札は2人なら52枚、3〜4人なら104枚。途中で混ぜ直さない。', '出たカードを覚えておくと、残りに10や絵札が多いかどうかが分かる。'] },
   energy: { goal: 'クラッシュせずに、最後まで走り続ける。', how: ['六角形のマスを、全員が同時に進む。通ったマスは自分の壁になる。', '進むルートを順にタップして「決定する」。全員が決めると一斉に動く。', '1マス目は無料。2マス目からは1マスごとにエナジーを10使う。', '盤に落ちている稲妻マークを取るとエナジー+10（上限50）。', '相手の壁は見えない。見えるのは自分の壁と、全員の今いる位置だけ。'], end: ['壁や、相手が今いるマスに入るとクラッシュ。', '同じマスに同時に飛び込んだら、残りエナジーの多い方だけが残る。同じなら全員クラッシュ。', '周りがすべて壁で動けなくなってもクラッシュ。', '最後まで残った人の勝ち。全員同時なら引き分け。'], tip: ['相手がどこを通ったか覚えておく。', '稲妻が消えた場所は、誰かが通った場所。'] }
 };
 function ruleHTML() {
@@ -1989,7 +1992,10 @@ function mainHTML() {
     }
     if (S.game === 'blackjack' && my && !ui.offline) {
       const d = S.bj, c = d.chips[my];
-      if (d.ph === 'bet' && c > 0 && !d.bet[my]) pad = `<div class="pad">${[10, 20, 50].filter(v => v < c).map(v => `<button class="wide" data-act="bjbet" data-v="${v}">${v}</button>`).join('')}<button class="put" data-act="bjbet" data-v="${c}">全部（${c}）</button></div>`;
+      if (d.ph === 'bet' && c > 0 && !d.bet[my]) {
+        const b = ui.bjBet = Math.max(Math.min(5, c), Math.min(c, ui.bjBet || 10)), adj = (v, l) => `<button data-act="bjadj" data-v="${v}" ${(v < 0 ? b <= Math.min(5, c) : b >= c) ? 'disabled' : ''}>${l}</button>`;
+        pad = `<div class="pad bjadj">${adj(-25, '−25')}${adj(-5, '−5')}<b class="bjamt">${b}</b>${adj(5, '+5')}${adj(25, '+25')}</div><div class="pad"><button class="wide" data-act="bjadj" data-v="all" ${b >= c ? 'disabled' : ''}>全部（${c}）</button><button class="put" data-act="bjbet">${b} チップ賭ける</button></div>`;
+      }
       else if (d.ph === 'play' && S.turn === my) pad = `<div class="pad"><button class="put" data-act="bjmv" data-v="120000">ヒット</button><button class="wide" data-act="bjmv" data-v="120001">スタンド</button>${d.hands[my].length === 2 && c >= d.bet[my] * 2 ? '<button class="wide" data-act="bjmv" data-v="120002">ダブル</button>' : ''}</div>`;
       else if (d.ph === 'done') pad = '<div class="pad"><button class="put" data-act="bjmv" data-v="120003">次のラウンドへ</button></div>';
     }
@@ -2402,7 +2408,13 @@ document.addEventListener('click', e => {
     else ui.dSel = ui.dSel === i ? -1 : i;
     render();
   }
-  else if (a === 'bjbet') act({ t: 'move', i: 110000 + Number(el.dataset.v) });
+  else if (a === 'bjadj') {
+    const c = S.bj.chips[colorOf(me.cid)] || 0, v = el.dataset.v, lo = Math.min(5, c);
+    if (v === 'all') ui.bjBet = c;
+    else { const n = (ui.bjBet || 10) + Number(v), r = Number(v) > 0 ? Math.floor(n / 5) * 5 : Math.ceil(n / 5) * 5; ui.bjBet = Math.max(lo, Math.min(c, Number(v) > 0 && n > c ? c : r)); }
+    render();
+  }
+  else if (a === 'bjbet') act({ t: 'move', i: 110000 + (ui.bjBet || 10) });
   else if (a === 'bjmv') act({ t: 'move', i: Number(el.dataset.v) });
   else if (a === 'elcell') {
     const i = Number(el.dataset.i), p = ui.elPath || (ui.elPath = []);
