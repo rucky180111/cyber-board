@@ -216,6 +216,33 @@ button:not(:disabled):active{transform:scale(.95)}
 .tchip{position:fixed;left:50%;top:10px;z-index:40;pointer-events:none;padding:7px 18px;font-family:var(--disp);font-size:12px;letter-spacing:.3em;white-space:nowrap;color:#03050d;background:var(--cy);box-shadow:0 0 18px var(--cy);animation:tchip 1.1s cubic-bezier(.2,1,.3,1) both}
 @keyframes tchip{0%{transform:translate(-50%,-150%)}18%,75%{transform:translate(-50%,0);opacity:1}100%{transform:translate(-50%,-60%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
+.bj{max-width:540px;margin:8px auto 0;display:grid;gap:8px}
+.bjrow{border:1px solid;padding:8px 10px;background:rgba(255,255,255,.02);opacity:.7}
+.bjrow.act,.bjrow.dealer{opacity:1}
+.bjrow.act{box-shadow:0 0 14px currentColor,inset 0 0 12px rgba(255,255,255,.05)}
+.bjrow.me{border-width:2px}
+.bjrow.out{opacity:.3}
+.bjrow.dealer{color:var(--yl);border-style:dashed}
+.bjhd{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.bjhd span{font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bjhd em{font-style:normal;font-family:var(--disp);font-size:10px;letter-spacing:.14em;color:var(--yl);flex:1}
+.bjhd b{font-family:var(--disp);font-size:18px;white-space:nowrap}
+.bjhd b small{font-size:9px;letter-spacing:.14em;margin-left:4px;opacity:.7}
+.bjhand{display:flex;align-items:center;gap:5px;min-height:50px;flex-wrap:wrap}
+.cd{width:34px;height:48px;flex:none;border-radius:5px;border:1px solid #bfe9ff;background:linear-gradient(160deg,#0d1b36,#050916);color:#e6faff;font-style:normal;font-family:var(--disp);font-weight:900;font-size:15px;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 0 8px rgba(0,240,255,.35)}
+.cd u{text-decoration:none;font-size:14px;font-family:serif}
+.cd.rd{color:var(--mg);border-color:var(--mg);box-shadow:0 0 8px rgba(255,43,214,.4)}
+.cd.bk{background:repeating-linear-gradient(45deg,#0b2a45 0 4px,#06152a 4px 8px);border-color:var(--cy)}
+.bjv{font-family:var(--disp);font-size:20px;margin-left:6px;color:var(--tx)}
+.bjv.top{color:var(--yl);text-shadow:0 0 10px var(--yl)}
+.bjv.bust{color:var(--mg);text-decoration:line-through}
+.bjbet{font-family:var(--disp);font-size:10px;letter-spacing:.12em;color:var(--dim);margin-left:auto}
+.bjres{font-family:var(--disp);font-size:18px;margin-left:8px}
+.bjres.w{color:var(--yl);text-shadow:0 0 10px var(--yl)}.bjres.l{color:var(--mg)}.bjres.p{color:var(--dim);font-size:13px}
+.fx .cd.nw{animation:cdin .32s cubic-bezier(.2,1.4,.4,1) calc(var(--st,0) * 90ms) both}
+.fx .bjrow.dealer .cd.nw{animation-delay:calc((var(--st,1) - 1) * 350ms)}
+@keyframes cdin{0%{transform:translateY(-26px) rotateY(90deg) scale(.7);opacity:0;filter:brightness(3)}}
+.fx .bjres{animation:finpop .4s cubic-bezier(.2,1.8,.4,1) .5s both}
 .el{display:block;width:min(100%,520px);margin:8px auto 6px;overflow:visible}
 .hx{fill:#05080f;stroke:rgba(0,240,255,.26);stroke-width:.35}
 .eldp{fill:var(--yl);stroke:#fff;stroke-width:.3;pointer-events:none;filter:drop-shadow(0 0 2px var(--yl));transform-box:fill-box;transform-origin:center;animation:blink 1.2s ease-in-out infinite}
@@ -613,10 +640,11 @@ const GAMES = {
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
   search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
   energy: { name: 'エナジーライン', size: 1, modes: [2, 3, 4], desc: '六角形のマスを全員同時に進み、通った跡が光の壁になる。相手の壁は見えず、壁や相手にぶつかるとクラッシュ。盤に落ちている稲妻を取るとエナジーが貯まり、エナジーを使うと1ターンに何マスも進める。最後まで走り続けた人の勝ち。' },
+  blackjack: { name: 'ブラックジャック', size: 1, modes: [2, 3, 4], desc: 'チップを賭けて、全員でディーラーに挑む。カードの合計を21に近づけ、ディーラーより大きければ勝ち。22以上はバースト。山札は混ぜ直さないので、出たカードを覚えているほど有利。最後にチップの多い人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周（一直線も含む）に乗るサークルモード。' }
 };
-const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice', 'search', 'energy'];
+const GORDER = ['gobblet', 'connect4', 'gomoku', 'reversi', 'quoridor', 'dots', 'hitblow', 'janken', 'charge', 'dice', 'search', 'energy', 'blackjack'];
 const DIRS = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 
 function newBoard(game) {
@@ -944,6 +972,83 @@ function rForbidden(b, x, y, depth) {
   return r;
 }
 function finish(s, w, why) { s.phase = 'result'; s.winner = w; s.why = why; s.turn = 0; }
+function bjTotal(h) {
+  let t = 0, a = 0;
+  h.forEach(c => { const r = c % 13; if (r === 0) { a++; t += 11; } else t += r >= 9 ? 10 : r + 1; });
+  while (t > 21 && a) { t -= 10; a--; }
+  return t;
+}
+function bjDeck(n) {
+  const d = [];
+  for (let k = 0; k < n; k++) for (let c = 0; c < 52; c++) d.push(c);
+  for (let q = d.length - 1; q > 0; q--) { const r = Math.floor(Math.random() * (q + 1)), z = d[q]; d[q] = d[r]; d[r] = z; }
+  return d;
+}
+function bjInit(np) {
+  const dn = np > 2 ? 2 : 1, z = () => new Array(np + 1).fill(0);
+  return { deck: bjDeck(dn), dn, dl: [], hands: z().map(() => []), bet: z(), chips: z().map((_, k) => (k ? 100 : 0)), st: z().map(() => ''), res: z(), ph: 'bet', rd: 1, n: 0, ev: null, gid: Math.random().toString(36).slice(2, 8) };
+}
+function bjDraw(d) { if (!d.deck.length) d.deck = bjDeck(d.dn); return d.deck.pop(); }
+function bjDealer(s) {
+  const d = s.bj, np = s.np, from = d.dl.length;
+  let live = false;
+  for (let c = 1; c <= np; c++) if (d.bet[c] && d.st[c] !== 'bust') live = true;
+  if (live) while (bjTotal(d.dl) < 17) d.dl.push(bjDraw(d));
+  const dt = bjTotal(d.dl), dbj = dt === 21 && d.dl.length === 2;
+  for (let c = 1; c <= np; c++) {
+    if (!d.bet[c]) continue;
+    const pt = bjTotal(d.hands[c]);
+    d.res[c] = d.st[c] === 'bust' ? -d.bet[c] : d.st[c] === 'bj' ? (dbj ? 0 : Math.ceil(d.bet[c] * 1.5)) : dbj ? -d.bet[c] : dt > 21 || pt > dt ? d.bet[c] : pt === dt ? 0 : -d.bet[c];
+    d.chips[c] += d.res[c];
+  }
+  d.ph = 'done'; s.turn = 0; d.ev = { t: 'dealer', c: 0, k: from };
+}
+function bjNext(s, c) {
+  const d = s.bj;
+  for (let p = c + 1; p <= s.np; p++) if (d.bet[p] && !d.st[p]) { s.turn = p; return; }
+  bjDealer(s);
+}
+function bjApply(s, i, c) {
+  const d = s.bj, np = s.np;
+  if (s.phase !== 'playing' || !d || !c || !Number.isInteger(i)) return false;
+  if (d.ph === 'bet') {
+    const a = i - 110000;
+    if (d.chips[c] <= 0 || d.bet[c] || a <= 0 || a > d.chips[c] || (a % 10 && a !== d.chips[c])) return false;
+    d.bet[c] = a; d.n++; d.ev = { t: 'bet', c };
+    for (let p = 1; p <= np; p++) if (d.chips[p] > 0 && !d.bet[p]) return true;
+    for (let k = 0; k < 2; k++) { for (let p = 1; p <= np; p++) if (d.bet[p]) d.hands[p].push(bjDraw(d)); d.dl.push(bjDraw(d)); }
+    for (let p = 1; p <= np; p++) if (d.bet[p] && bjTotal(d.hands[p]) === 21) d.st[p] = 'bj';
+    d.ph = 'play'; d.ev = { t: 'deal', c: 0 };
+    bjNext(s, 0);
+    return true;
+  }
+  if (d.ph === 'play') {
+    if (s.turn !== c || d.st[c]) return false;
+    if (i === 120000 || i === 120002) {
+      if (i === 120002) { if (d.hands[c].length !== 2 || d.chips[c] < d.bet[c] * 2) return false; d.bet[c] *= 2; }
+      d.hands[c].push(bjDraw(d));
+      const v = bjTotal(d.hands[c]);
+      d.st[c] = v > 21 ? 'bust' : v === 21 || i === 120002 ? 'stand' : '';
+      d.n++; d.ev = { t: v > 21 ? 'bust' : 'hit', c };
+    } else if (i === 120001) { d.st[c] = 'stand'; d.n++; d.ev = { t: 'stand', c }; }
+    else return false;
+    if (d.st[c]) bjNext(s, c);
+    return true;
+  }
+  if (i !== 120003) return false;
+  const al = [];
+  for (let p = 1; p <= np; p++) if (d.chips[p] > 0) al.push(p);
+  d.n++;
+  if (!al.length || d.deck.length < 6 * (al.length + 1)) {
+    const mx = Math.max.apply(null, d.chips.slice(1)), top = [];
+    for (let p = 1; p <= np; p++) if (d.chips[p] === mx) top.push(p);
+    finish(s, top.length === 1 && mx > 0 ? top[0] : 0, 'bj');
+    return true;
+  }
+  for (let p = 0; p <= np; p++) { d.hands[p] = []; d.bet[p] = 0; d.st[p] = ''; d.res[p] = 0; }
+  d.dl = []; d.ph = 'bet'; d.rd++; d.ev = { t: 'round', c: 0 }; s.turn = 0;
+  return true;
+}
 const EDIR = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 function elIdx(R, q, r) { return Math.abs(q) <= R && Math.abs(r) <= R && Math.abs(q + r) <= R ? (r + R) * (2 * R + 1) + q + R : -1; }
 function elQR(R, i) { const W = 2 * R + 1; return [i % W - R, Math.floor(i / W) - R]; }
@@ -1101,6 +1206,7 @@ function applyMove(s, i, c) {
   if (s.game === 'dice') return dcApply(s, i, c);
   if (s.game === 'search') return sgApply(s, i, c);
   if (s.game === 'energy') return elApply(s, i, c);
+  if (s.game === 'blackjack') return bjApply(s, i, c);
   if (GAMES[s.game] && GAMES[s.game].dk) return dApply(s, i, c);
   if (s.phase !== 'playing' || !c || s.turn !== c) return false;
   if (s.game === 'quoridor') return qApply(s, i, c);
@@ -1185,6 +1291,7 @@ function broadcast() {
   let pub = S;
   if (S.phase === 'playing' && S.hb) pub = Object.assign({}, S, { hb: Object.assign({}, S.hb, { sec: null }) });
   if (S.phase === 'playing' && S.ca) pub = Object.assign({}, S, { ca: Object.assign({}, S.ca, { pick: S.ca.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
+  if (S.phase === 'playing' && S.bj) pub = Object.assign({}, S, { bj: Object.assign({}, S.bj, { deck: S.bj.deck.length, dl: S.bj.ph === 'play' ? [S.bj.dl[0], -1] : S.bj.dl }) });
   if (S.phase === 'playing' && S.el) pub = Object.assign({}, S, { el: Object.assign({}, S.el, { pick: S.el.pick.map(v => (Array.isArray(v) ? 1 : v)) }) });
   if (S.phase === 'playing' && S.sh) pub = Object.assign({}, S, { sh: Object.assign({}, S.sh, { it: null }) });
   if (S.phase === 'playing' && S.jk) pub = Object.assign({}, S, { jk: Object.assign({}, S.jk, { pick: S.jk.pick.map(v => v == null ? v : v >= 0 ? 99 : -1) }) });
@@ -1204,7 +1311,7 @@ function act(msg) {
 function unseat() {
   S.members.forEach(m => { if (m.seat && colorOf(m.cid)) m.role = 'p' + m.seat; delete m.seat; });
 }
-function noFirst() { return S.game === 'janken' || S.game === 'charge' || S.game === 'energy'; }
+function noFirst() { return S.game === 'janken' || S.game === 'charge' || S.game === 'energy' || S.game === 'blackjack'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
 const RULES = {
   reversi: { goal: '盤が埋まったとき、自分の色の石が多い方の勝ち。', how: ['8×8の盤に、交互に石を1つずつ置く。', '置けるのは、相手の石を自分の石で挟める場所だけ（縦・横・斜め）。', '挟んだ相手の石は、すべて自分の色に裏返る。', '置ける場所がないときは自動でパスになる。'], end: ['両者とも置けなくなったら終了。石の数が多い方の勝ち、同数は引き分け。'], tip: ['角は一度取ると裏返されない。', '黄色い点が置ける場所。'] },
@@ -1218,6 +1325,7 @@ const RULES = {
   charge: { goal: 'アタックかビクトリーを決めて、相手を倒す。', how: ['毎ターン、お互いに5つのコマンドから1つ選んで同時に出す。エナジー（EN）1から始まる。', 'チャージ：EN+1。アタックを受けると負け。', 'アタック（EN1消費）：チャージ中の相手を倒す。バリアには防がれる。', 'バリア（消費なし）：アタックを防ぐ。', 'リバース（EN1消費）：相手のアタックとビクトリーを跳ね返して勝つ。それ以外には空振り。', 'ビクトリー（EN3消費）：即勝利。止められるのはリバースだけ。'], end: ['どちらかが倒れるまで続く。'], tip: ['アタック同士・ビクトリー同士は相打ちで続行。', 'ENが足りないコマンドは選べない。相手のENを見て手を読む。'] },
   dice: { goal: '点を貯めて、先に50点へ届く。', how: ['自分の番に「サイコロを振る」か「確定する」を選ぶ。', '振って出た目は、そのターンの点として貯まる。何回でも振れる。', '1が出ると、そのターンに貯めた点はすべて没収されて交代。', '「確定する」と、貯めた点が自分の得点に入って交代。'], end: ['50点以上で確定するとゴール。', '誰かがゴールしても、その周は最後の人まで続く。', '同じ周にゴールした人どうしは、点の高い方が上。同点は同順位。', '3人以上のときは、最後の1人が決まるまで続く。'], tip: ['50点を超えてからも振れる。相手より上を狙うか、確実に止めるか。'] },
   search: { goal: '隠れているクリスタルを見つけて、合計点を一番多く取る。', how: ['9×9の盤に、クリスタルが20個隠れている。', '自分の番に、マスを1つタップして開ける。', 'クリスタルがあれば得点して、もう1回開けられる。', 'なければ、周り8マスにあるクリスタルの数が出て交代。', 'クリスタルは、ひし形1点（14個）・六角形2点（5個）・星3点（1個）。'], end: ['全部見つかるか、逆転できない点差がついたら終了。', '合計点の多い人の勝ち。'], tip: ['数字を読めば、確実にある場所が分かる。', '最初の1手は必ず空きマス。'] },
+  blackjack: { goal: 'ディーラーに勝ってチップを増やす。最後にチップが一番多い人の勝ち。', how: ['全員100チップで始める。対戦相手はコンピューターのディーラーで、プレイヤーどうしは直接戦わない。', 'ラウンドの最初に、全員が賭けるチップを決める。', '全員に2枚ずつ表で配られる。ディーラーは1枚が表、1枚が伏せ。', '順番に「ヒット（1枚引く）」か「スタンド（止める）」を選ぶ。合計が22以上になるとバーストで負け。', '「ダブル」は最初の2枚のときだけ選べる。賭けを2倍にして、1枚だけ引いて止まる。', '全員が終わると、ディーラーが伏せ札を開け、合計17以上になるまで引く。', 'カードの数え方：2〜10は数字のまま、J・Q・Kは10、Aは1か11の都合のいい方。'], end: ['ディーラーより21に近ければ勝ち。賭けた分と同じだけもらえる。', 'ディーラーがバーストしたら、バーストしていない人は全員勝ち。', '同じ合計なら引き分け（PUSH）で、賭けは戻る。', '最初の2枚で21はブラックジャック。賭けの1.5倍もらえる。', 'チップが0になった人は脱落。', '山札が少なくなったら終了。チップの一番多い人の勝ち。'], tip: ['山札は2人なら52枚、3〜4人なら104枚。途中で混ぜ直さない。', '出たカードを覚えておくと、残りに10や絵札が多いかどうかが分かる。'] },
   energy: { goal: 'クラッシュせずに、最後まで走り続ける。', how: ['六角形のマスを、全員が同時に進む。通ったマスは自分の壁になる。', '進むルートを順にタップして「決定する」。全員が決めると一斉に動く。', '1マス目は無料。2マス目からは1マスごとにエナジーを10使う。', '盤に落ちている稲妻マークを取るとエナジー+10（上限50）。', '相手の壁は見えない。見えるのは自分の壁と、全員の今いる位置だけ。'], end: ['壁や、相手が今いるマスに入るとクラッシュ。', '同じマスに同時に飛び込んだら、残りエナジーの多い方だけが残る。同じなら全員クラッシュ。', '周りがすべて壁で動けなくなってもクラッシュ。', '最後まで残った人の勝ち。全員同時なら引き分け。'], tip: ['相手がどこを通ったか覚えておく。', '稲妻が消えた場所は、誰かが通った場所。'] }
 };
 function ruleHTML() {
@@ -1258,8 +1366,8 @@ function startGame() {
   if (noFirst()) S.sg = (S.sg || 0) + 1;
   S.np = NP(); S.note = ''; S.counted = false; S.gno = (S.gno || 0) + 1; S.mv = 0;
   Object.assign(S, { phase: 'playing', board: newBoard(S.game), turn: 1, last: -1, line: null, winner: 0, why: '', passed: 0,
-                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, sh: S.game === 'search' ? sgInit(S.np) : null, el: S.game === 'energy' ? elInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
-  if (S.hb || S.jk || S.ca || S.el || S.pre) S.turn = 0;
+                     q: S.game === 'quoridor' ? qInit(S.np) : null, g: S.game === 'gobblet' ? gInit() : null, hb: S.game === 'hitblow' ? hInit() : null, jk: S.game === 'janken' ? jInit() : null, ca: S.game === 'charge' ? caInit() : null, dc: S.game === 'dice' ? dcInit(S.np) : null, sh: S.game === 'search' ? sgInit(S.np) : null, el: S.game === 'energy' ? elInit(S.np) : null, bj: S.game === 'blackjack' ? bjInit(S.np) : null, dt: GAMES[S.game].dk ? dInit(S.dv === 'ci' ? 'ci' : 'sq', S.np) : null, lastWall: '' });
+  if (S.hb || S.jk || S.ca || S.el || S.bj || S.pre) S.turn = 0;
   broadcast();
 }
 function setNp(n) {
@@ -1482,6 +1590,20 @@ function dBoardHTML() {
   }
   if (k && k.ok) h += dShapeSVG(d);
   return h + '</div>';
+}
+function bjBoardHTML() {
+  const d = S.bj, my = colorOf(me.cid), e = d.ev || {}, left = Array.isArray(d.deck) ? d.deck.length : d.deck, hide = d.ph === 'play';
+  const card = (c, nw, st) => c < 0 ? '<i class="cd bk"></i>' : `<i class="cd${c >= 13 && c < 39 ? ' rd' : ''}${nw ? ' nw' : ''}" style="--st:${st || 0}">${['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'][c % 13]}<u>${'♠♥♦♣'[Math.floor(c / 13)]}</u></i>`;
+  const dl = d.dl.map((c, k) => (hide && k === 1 ? card(-1) : card(c, e.t === 'deal' || (e.t === 'dealer' && k >= 1), e.t === 'deal' ? NP() * 2 + k : k))).join('');
+  const dv = !d.dl.length ? '' : hide ? bjTotal([d.dl[0]]) + ' + ?' : bjTotal(d.dl);
+  const rows = Array.from({ length: NP() }, (_, k) => {
+    const p = k + 1, h = d.hands[p], v = h.length ? bjTotal(h) : 0, out = d.chips[p] <= 0 && !d.bet[p];
+    const tag = out ? 'OUT' : d.st[p] === 'bust' ? 'BUST' : d.st[p] === 'bj' ? 'BLACKJACK' : d.ph === 'bet' ? (d.bet[p] ? 'BET OK' : '') : '';
+    const res = d.ph === 'done' && d.bet[p] ? `<b class="bjres ${d.res[p] > 0 ? 'w' : d.res[p] < 0 ? 'l' : 'p'}">${d.res[p] > 0 ? '+' + d.res[p] : d.res[p] < 0 ? d.res[p] : 'PUSH'}</b>` : '';
+    return `<div class="bjrow c${p}${S.turn === p ? ' act' : ''}${p === my ? ' me' : ''}${out ? ' out' : ''}"><div class="bjhd"><span>${esc(nameOf(p))}</span><em>${tag}</em><b>${d.chips[p]}<small>CHIP</small></b></div>
+      <div class="bjhand">${h.map((c, q) => card(c, e.t === 'deal' || ((e.t === 'hit' || e.t === 'bust') && e.c === p && q === h.length - 1), e.t === 'deal' ? q * NP() + k : 0)).join('')}${h.length ? `<b class="bjv${v > 21 ? ' bust' : v === 21 ? ' top' : ''}">${v}</b>` : ''}${d.bet[p] && d.ph !== 'bet' ? `<small class="bjbet">BET ${d.bet[p]}</small>` : ''}${res}</div></div>`;
+  }).join('');
+  return `<div class="bj"><div class="bjrow dealer"><div class="bjhd"><span>DEALER</span><em>${!hide && d.dl.length && bjTotal(d.dl) > 21 ? 'BUST' : ''}</em><b class="bjdk">${left}<small>DECK</small></b></div><div class="bjhand">${dl}${dv !== '' ? `<b class="bjv${!hide && dv > 21 ? ' bust' : ''}">${dv}</b>` : ''}</div></div>${rows}<p class="dcgoal">ROUND ${d.rd} ■ 山札 残り ${left}枚</p></div>`;
 }
 function elCand() {
   const d = S.el, my = colorOf(me.cid), p = ui.elPath || [];
@@ -1710,6 +1832,7 @@ function boardHTML() {
   if (S.game === 'dice') return dcBoardHTML();
   if (S.game === 'search') return sgBoardHTML();
   if (S.game === 'energy') return elBoardHTML();
+  if (S.game === 'blackjack') return bjBoardHTML();
   if (GAMES[S.game].dk) return dBoardHTML();
   const n = GAMES[S.game].size, my = colorOf(me.cid);
   const myTurn = S.phase === 'playing' && my && S.turn === my && !ui.offline;
@@ -1742,9 +1865,16 @@ function msgHTML() {
   if (S.pre && S.phase === 'playing') return `<div class="msg">${me.isHost ? '先手を選んでください' : 'ホストが先手を選んでいます…'}</div>`;
   if (S.phase === 'result' && FIN()) return `<div class="msg finm">${finLabel()}</div>`;
   if (S.phase === 'result') {
-    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', energy: S.winner ? '最後まで走り続けました' : '全員がクラッシュしました', search: S.sh ? S.sh.sc.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v + '点').join(' ／ ') : '', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
+    const why = { count: `${count(S.board, 1)} - ${count(S.board, 2)}`, five: '5つ並びました', shape: S.dt ? (S.dt.kind === 'sq' ? '正方形' : '円') + 'の指摘が成立しました' : '', miss: '指摘が外れて失格になりました', ko: S.ca && S.ca.log.length ? caWhy() : '', pts: S.jk ? `${S.jk.sc[1]}点 - ${S.jk.sc[2]}点` : '', hit3: '3ヒットで数字を当てました', both: '同じターンに両者とも数字を当てました', turns: '10ターンで決着がつきませんでした', three: '3つ並びました', reveal: '動かしたコマの下から、相手の3つ並びが現れました', rep: '同じ局面が3回現れました', four: '4つ並びました', goal: '反対側の辺に到達しました', full: '盤面が埋まりました', resign: '投了しました', bj: S.bj ? S.bj.chips.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v).join(' ／ ') + ' チップ' : '', energy: S.winner ? '最後まで走り続けました' : '全員がクラッシュしました', search: S.sh ? S.sh.sc.slice(1).map((v, k) => esc(nameOf(k + 1)) + ' ' + v + '点').join(' ／ ') : '', dice: S.dc ? S.dc.rank.map(c => S.dc.pos[c] + '位 ' + esc(nameOf(c)) + '（' + S.dc.sc[c] + '点）').join(' ／ ') : '' }[S.why] || '';
     const t = S.winner ? `WINNER : ${esc(nameOf(S.winner))}` : 'DRAW / 引き分け';
     return `<div class="msg win">${t}<small>${why}</small></div>`;
+  }
+  if (S.game === 'blackjack') {
+    const d = S.bj, act = my && (d.chips[my] > 0 || d.bet[my]);
+    const m = d.ph === 'bet' ? (!act ? (my ? 'チップがなくなりました — 観戦中' : '観戦中') : d.bet[my] ? 'ほかのプレイヤーを待っています…' : '賭けるチップを選んでください')
+      : d.ph === 'play' ? (my === S.turn ? 'あなたの番です' : `${esc(nameOf(S.turn))} の番です`) : 'ラウンド終了';
+    const sub = d.ph === 'bet' ? '勝てば賭けた分が増え、負ければ失います' : d.ph === 'play' ? (my === S.turn ? '「ヒット」で1枚引く、「スタンド」で止める。22以上はバースト' : 'ディーラーは最後に、17以上になるまで引きます') : '誰かが「次のラウンドへ」を押すと進みます';
+    return `<div class="msg">${m}<small>${sub}</small></div>`;
   }
   if (S.game === 'energy') {
     const d = S.el, n = (ui.elPath || []).length;
@@ -1857,6 +1987,12 @@ function mainHTML() {
         <button class="put" data-act="qput" ${ok ? '' : 'disabled'}>${ui.qa >= 0 && !ok ? 'ここには置けません' : 'ここに置く'}</button>
       </div>` : '');
     }
+    if (S.game === 'blackjack' && my && !ui.offline) {
+      const d = S.bj, c = d.chips[my];
+      if (d.ph === 'bet' && c > 0 && !d.bet[my]) pad = `<div class="pad">${[10, 20, 50].filter(v => v < c).map(v => `<button class="wide" data-act="bjbet" data-v="${v}">${v}</button>`).join('')}<button class="put" data-act="bjbet" data-v="${c}">全部（${c}）</button></div>`;
+      else if (d.ph === 'play' && S.turn === my) pad = `<div class="pad"><button class="put" data-act="bjmv" data-v="120000">ヒット</button><button class="wide" data-act="bjmv" data-v="120001">スタンド</button>${d.hands[my].length === 2 && c >= d.bet[my] * 2 ? '<button class="wide" data-act="bjmv" data-v="120002">ダブル</button>' : ''}</div>`;
+      else if (d.ph === 'done') pad = '<div class="pad"><button class="put" data-act="bjmv" data-v="120003">次のラウンドへ</button></div>';
+    }
     if (S.game === 'energy' && my && S.el.alive[my] && !S.el.pick[my] && !ui.offline) { const n = (ui.elPath || []).length; pad = `<div class="pad"><button class="wide" data-act="elundo" ${n ? '' : 'disabled'}>1マス戻す</button><button class="put" data-act="elgo" ${n ? '' : 'disabled'}>${n > 1 ? '決定する（EN -' + 10 * (n - 1) + '）' : '決定する'}</button></div>`; }
     if (S.game === 'dice' && my && S.turn === my && !ui.offline) pad = `<div class="pad"><button class="wide" data-act="dcroll">サイコロを振る</button><button class="put" data-act="dcbank" ${S.dc.pot ? '' : 'disabled'}>確定する${S.dc.pot ? '（+' + S.dc.pot + '）' : ''}</button></div>`;
     if (my && NP() === 2) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
@@ -1867,7 +2003,7 @@ function mainHTML() {
   } else btn = `<p class="note">ホストがゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
     <div class="ptop"><h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2><button class="ibtn" data-act="rule" aria-label="ルールを見る">i</button></div>
-    ${S.dc ? '' : `<div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>`}${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
+    ${S.dc || S.bj ? '' : `<div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>`}${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
     <div class="actions">${btn}</div>
   </section>`;
 }
@@ -2030,6 +2166,22 @@ function fxAfter() {
   ui.fxNew = false;
   const g = S.game, q = s => document.querySelector(s);
   if (g === 'janken' || g === 'charge') return;
+  if (g === 'blackjack') {
+    const d = S.bj, e = d.ev || {}, my = colorOf(me.cid), key = d.gid + ':' + d.n + ':' + e.t;
+    if (ui.bjFx === key) { sfx('tap'); return; }
+    ui.bjFx = key;
+    if (e.t === 'deal') for (let k = 0; k < NP() * 2 + 2; k++) setTimeout(() => sfx('flip', .8 + (k % 4) * .08), k * 90);
+    else if (e.t === 'hit') sfx('flip', 1.1);
+    else if (e.t === 'bust') { sfx('flip', 1.1); setTimeout(() => { sfx('wall'); vib([30, 40, 60]); }, 250); }
+    else if (e.t === 'stand') sfx('ready');
+    else if (e.t === 'bet') sfx('ping', 1.3);
+    else if (e.t === 'dealer') {
+      const n = d.dl.length - 1;
+      for (let k = 0; k < n; k++) setTimeout(() => sfx('flip', .9 + k * .1), k * 350);
+      setTimeout(() => { if (my && d.res[my] > 0) { sfx('ping', 1.2); setTimeout(() => sfx('ping', 1.6), 100); } else if (my && d.res[my] < 0) sfx('wall'); else sfx('ready'); }, n * 350 + 250);
+    }
+    return;
+  }
   if (g === 'energy') {
     const L = S.el.log, key = S.el.gid + ':' + (L ? L.n : 0);
     if (!L || ui.elFx === key) { sfx('ready'); return; }
@@ -2161,7 +2313,7 @@ function fxResult() {
 }
 function FIN() { return ui.finUntil > Date.now(); }
 function finLabel() {
-  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', search: 'COMPLETE', energy: 'CRASH', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
+  return S.why === 'miss' ? 'MISS' : S.game === 'charge' ? caWhy() : S.dt ? (S.dt.kind === 'ci' ? 'CIRCLE' : 'SQUARE') : ({ gomoku: '5 IN A ROW', connect4: '4 IN A ROW', gobblet: '3 IN A ROW', quoridor: 'GOAL', dice: '50 POINTS', search: 'COMPLETE', energy: 'CRASH', blackjack: 'FINAL', hitblow: '3 HIT', reversi: 'COUNT', janken: 'RESULT' })[S.game] || 'FINISH';
 }
 function finHTML() {
   if (!FIN()) return '';
@@ -2250,6 +2402,8 @@ document.addEventListener('click', e => {
     else ui.dSel = ui.dSel === i ? -1 : i;
     render();
   }
+  else if (a === 'bjbet') act({ t: 'move', i: 110000 + Number(el.dataset.v) });
+  else if (a === 'bjmv') act({ t: 'move', i: Number(el.dataset.v) });
   else if (a === 'elcell') {
     const i = Number(el.dataset.i), p = ui.elPath || (ui.elPath = []);
     if (elCand().includes(i)) { p.push(i); sfx('flip', 1 + p.length * .1); render(); }
