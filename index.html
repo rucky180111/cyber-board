@@ -328,6 +328,15 @@ button:not(:disabled):active{transform:scale(.95)}
 .vs.four{grid-template-columns:1fr 1fr}
 .modes{display:flex;gap:10px;margin-top:12px}
 .modes button{flex:1;background:#03050d;border:1px solid var(--line);color:var(--dim);padding:10px;font-family:inherit;font-weight:700;cursor:pointer}
+.ptop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.ptop h2{margin:0}
+.ibtn{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--cy);background:rgba(0,240,255,.08);color:var(--cy);font-family:Georgia,serif;font-style:italic;font-weight:700;font-size:16px;line-height:1;cursor:pointer;box-shadow:0 0 8px rgba(0,240,255,.35);touch-action:manipulation}
+.pick.rule{width:min(100%,460px);max-height:86vh;display:flex;flex-direction:column}
+.pick.rule .rgoal{margin:6px 0 10px;padding:9px 12px;border-left:2px solid var(--yl);background:rgba(246,255,0,.07);color:var(--tx);font-weight:700;font-size:14px;line-height:1.6}
+.rbody{overflow-y:auto;min-height:0;padding-right:4px}
+.rbody h4{margin:12px 0 4px;font-family:var(--disp);font-size:11px;letter-spacing:.2em;color:var(--cy)}
+.rbody ul{margin:0;padding-left:1.2em}
+.rbody li{font-size:13px;line-height:1.7;color:var(--tx);margin-bottom:2px}
 .pickbg{position:fixed;inset:0;z-index:60;background:rgba(3,5,13,.82);display:flex;align-items:center;justify-content:center;padding:16px}
 .pick{width:min(100%,380px);background:#070b18;border:1px solid var(--cy);box-shadow:0 0 30px rgba(0,240,255,.35);padding:18px}
 .pick h3{margin:0 0 4px;font-family:var(--disp);font-size:14px;letter-spacing:.2em;color:var(--cy)}
@@ -1196,6 +1205,25 @@ function unseat() {
 }
 function noFirst() { return S.game === 'janken' || S.game === 'charge' || S.game === 'energy'; }
 function seatMember(k) { return S.members.find(m => m.seat ? m.seat === k && colorOf(m.cid) : colorOf(m.cid) === k); }
+const RULES = {
+  reversi: { goal: '盤が埋まったとき、自分の色の石が多い方の勝ち。', how: ['8×8の盤に、交互に石を1つずつ置く。', '置けるのは、相手の石を自分の石で挟める場所だけ（縦・横・斜め）。', '挟んだ相手の石は、すべて自分の色に裏返る。', '置ける場所がないときは自動でパスになる。'], end: ['両者とも置けなくなったら終了。石の数が多い方の勝ち、同数は引き分け。'], tip: ['角は一度取ると裏返されない。', '黄色い点が置ける場所。'] },
+  gobblet: { goal: '自分のコマを縦・横・斜めのどれかに3つ並べる。', how: ['3×3の盤。各自、大・中・小のコマを2つずつ持つ。', '自分の番に「手持ちのコマを置く」か「盤上の自分のコマを動かす」のどちらかをする。', '大きいコマは、自分や相手の小さいコマの上に被せられる。', '被せられたコマは隠れ、上のコマが動くとまた現れる。'], end: ['一番上に見えているコマが3つ並んだら勝ち。', 'コマを動かした結果、下から相手の3つ並びが現れたら相手の勝ち。', '同じ局面が3回現れたら引き分け。'], tip: ['下に何が隠れているか覚えておく。'] },
+  connect4: { goal: '自分の石を縦・横・斜めのどれかに4つ並べる。', how: ['横7×縦6の盤。交互に、好きな列を選んで石を1つ落とす。', '石はその列の一番下まで落ちて積み重なる。'], end: ['先に4つ並べた方の勝ち。', '盤が埋まっても決まらなければ引き分け。'], tip: ['相手が3つ並べたら、4つ目の場所を先に塞ぐ。'] },
+  gomoku: { goal: '自分の石を縦・横・斜めのどれかに5つ並べる。', how: ['15×15の盤。交互に、空いているマスへ石を1つ置く。', 'マスをタップして選び、「ここに置く」で確定する。', '3人戦は3人が順番に置く。'], end: ['先に5つ並べた人の勝ち。', '盤が埋まっても決まらなければ引き分け。'], tip: ['2人戦の先手だけ、次の手が禁じ手（×印のマスには置けない）。', '三三：三を同時に2つ作る手。', '四四：四を同時に2つ作る手。', '長連：6つ以上並べる手。', '3人戦に禁じ手はない。'] },
+  quoridor: { goal: '自分のコマを、スタートと反対側の辺まで先に進める。', how: ['9×9の盤。自分の番に「コマを1マス動かす」か「壁を1枚置く」のどちらかをする。', 'コマは縦・横に1マス進む。隣に相手がいれば飛び越えられる。', '壁は2マス分の長さで、通り道を塞ぐ。壁は動かせない。', '壁の枚数は2人戦で各10枚、4人戦で各5枚。'], end: ['自分の色の線がある辺に着いた人の勝ち。'], tip: ['相手のゴールへの道を完全に塞ぐ壁は置けない。', '壁を使い切ると、あとはコマを動かすしかない。'] },
+  dots: { goal: '4つのドットで「形」を作ってしまわないこと。作った人が負け。', how: ['8×8の盤。順番に、空いているマスへドットを1つ打つ。ドットは全員共通。', 'スクエアモード：4つのドットが正方形の頂点になったら「形」（斜めに傾いた正方形も含む）。', 'サークルモード：4つのドットが同じ円の上に乗ったら「形」。', '4つ目以降のドットが打たれるたび、ほかの全員が「指摘する／指摘しない」を選ぶ。', '指摘するときは、今打たれたドットと、形を作るほかの3点を選ぶ。'], end: ['指摘が正しければ、打った人が失格。', '指摘が外れたら、指摘した人が失格。', '最後まで残った人の勝ち。'], tip: ['形ができても、誰も指摘しなければそのまま続く。'] },
+  hitblow: { goal: '相手が決めた3桁の数字を、先に当てる。', how: ['お互いに、0〜9から同じ数字を使わない3桁を決める（例：407）。', '両者が決めたら先手を決め、交互に相手の数字を推理して入力する。', 'ヒット：数字も位置も合っている個数。', 'ブロー：数字は合っているが位置が違う個数。'], end: ['3ヒットで相手の数字を当てたら勝ち。', '先手が当てても、同じターンに後手も当てれば引き分け。', '10ターンで決まらなければ引き分け。'], tip: ['例：答えが407で「470」と推理すると、1ヒット2ブロー。'] },
+  janken: { goal: '9回のじゃんけんで、合計点を相手より多く取る。', how: ['手札は、グー・チョキ・パーがそれぞれ1点・2点・3点の計9枚。', '毎回、お互いに1枚選んで同時に出す。出した手札はなくなる。', '勝った方が、自分の出した手札の点数をもらう。あいこは0点。', '相手の残り手札は見える。'], end: ['9枚すべて出し終えたら終了。合計点の多い方の勝ち、同点は引き分け。'], tip: ['3点の手札をいつ出すかが勝負の分かれ目。'] },
+  charge: { goal: 'アタックかビクトリーを決めて、相手を倒す。', how: ['毎ターン、お互いに5つのコマンドから1つ選んで同時に出す。エナジー（EN）1から始まる。', 'チャージ：EN+1。アタックを受けると負け。', 'アタック（EN1消費）：チャージ中の相手を倒す。バリアには防がれる。', 'バリア（消費なし）：アタックを防ぐ。', 'リバース（EN1消費）：相手のアタックとビクトリーを跳ね返して勝つ。それ以外には空振り。', 'ビクトリー（EN3消費）：即勝利。止められるのはリバースだけ。'], end: ['どちらかが倒れるまで続く。'], tip: ['アタック同士・ビクトリー同士は相打ちで続行。', 'ENが足りないコマンドは選べない。相手のENを見て手を読む。'] },
+  dice: { goal: '点を貯めて、先に50点へ届く。', how: ['自分の番に「サイコロを振る」か「確定する」を選ぶ。', '振って出た目は、そのターンの点として貯まる。何回でも振れる。', '1が出ると、そのターンに貯めた点はすべて没収されて交代。', '「確定する」と、貯めた点が自分の得点に入って交代。'], end: ['50点以上で確定するとゴール。', '誰かがゴールしても、その周は最後の人まで続く。', '同じ周にゴールした人どうしは、点の高い方が上。同点は同順位。', '3人以上のときは、最後の1人が決まるまで続く。'], tip: ['50点を超えてからも振れる。相手より上を狙うか、確実に止めるか。'] },
+  search: { goal: '隠れているクリスタルを見つけて、合計点を一番多く取る。', how: ['9×9の盤に、クリスタルが20個隠れている。', '自分の番に、マスを1つタップして開ける。', 'クリスタルがあれば得点して、もう1回開けられる。', 'なければ、周り8マスにあるクリスタルの数が出て交代。', 'クリスタルは、ひし形1点（14個）・六角形2点（5個）・星3点（1個）。'], end: ['全部見つかるか、逆転できない点差がついたら終了。', '合計点の多い人の勝ち。'], tip: ['数字を読めば、確実にある場所が分かる。', '最初の1手は必ず空きマス。'] },
+  energy: { goal: 'クラッシュせずに、最後まで走り続ける。', how: ['六角形のマスを、全員が同時に進む。通ったマスは自分の壁になる。', '進むルートを順にタップして「決定する」。全員が決めると一斉に動く。', '1マス目は無料。2マス目からは1マスごとにエナジーを10使う。', '盤に落ちている稲妻マークを取るとエナジー+10（上限50）。', '相手の壁は見えない。見えるのは自分の壁と、全員の今いる位置だけ。'], end: ['壁や、相手が今いるマスに入るとクラッシュ。', '同じマスに同時に飛び込んだら、残りエナジーの多い方だけが残る。同じなら全員クラッシュ。', '周りがすべて壁で動けなくなってもクラッシュ。', '最後まで残った人の勝ち。全員同時なら引き分け。'], tip: ['相手がどこを通ったか覚えておく。', '稲妻が消えた場所は、誰かが通った場所。'] }
+};
+function ruleHTML() {
+  if (!ui.rule || !S || S.phase === 'lobby' || !RULES[S.game]) { ui.rule = false; return ''; }
+  const r = RULES[S.game], sec = (h, a) => `<h4>${h}</h4><ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>`;
+  return `<div class="pickbg"><div class="pick rule"><h3>RULE // ${GAMES[S.game].name}</h3><p class="rgoal">${r.goal}</p><div class="rbody">${sec('進め方', r.how)}${sec('決着', r.end)}${r.tip ? sec('ポイント', r.tip) : ''}</div><button class="x" data-act="rulex">閉じる</button></div></div>`;
+}
 function pickHTML() {
   if (!me.isHost || !S || S.phase !== 'playing' || !S.pre) return '';
   return `<div class="pickbg"><div class="pick"><h3>FIRST MOVE</h3><p>${S.hb ? '数字が出そろいました。' : ''}先手を選んでください</p>${Array.from({ length: NP() }, (_, k) => { const m = seatMember(k + 1); return `<button data-act="pick" data-f="${k + 1}"><small>${k + 1}P</small><span>${m ? esc(m.name) : ''}</span></button>`; }).join('')}<button class="rnd" data-act="pick" data-f="0"><small>?</small><span>ランダム</span></button><button class="x" data-act="pickx">中断してゲーム選択に戻る</button></div></div>`;
@@ -1543,7 +1571,7 @@ function caBoardHTML() {
       <b>チャージ</b>：EN+1。アタックを受けると負け<br><b>アタック</b>（EN1）：チャージ中の相手を倒す。バリアには防がれる<br>
       <b>バリア</b>：アタックを防ぐ<br><b>リバース</b>（EN1）：相手のアタックとビクトリーを跳ね返して勝ち。それ以外には空振り（ENだけ消費）<br>
       <b>ビクトリー</b>（EN3）：即勝利。止められるのはリバースだけ<br>アタック同士・ビクトリー同士は相打ちで続行</div>` : '');
-  return `<div class="jk">${side(R)}${mid}${side(L)}${cmds}${log}${help}</div>`;
+  return `<div class="jk">${side(R)}${mid}${side(L)}${cmds}${log}</div>`;
 }
 function jSync() {
   const j = S.jk || S.ca, n = j.log.length;
@@ -1833,7 +1861,7 @@ function mainHTML() {
             <button class="btn sm" data-act="start">再戦する</button>`;
   } else btn = `<p class="note">ホストがゲームを選ぶのを待っています…</p>`;
   return `<section class="panel">
-    <h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2>
+    <div class="ptop"><h2>${GAMES[S.game].name.toUpperCase()}${S.dt ? '（' + (S.dt.kind === 'ci' ? 'サークル' : 'スクエア') + '）' : ''} // ${S.phase === 'playing' ? 'IN GAME' : 'RESULT'}</h2><button class="ibtn" data-act="rule" aria-label="ルールを見る">i</button></div>
     ${S.dc ? '' : `<div class="score">${Array.from({ length: NP() }, (_, k) => pl(k + 1)).join('')}</div>`}${msgHTML()}<div class="bwrap">${boardHTML()}${finHTML()}</div>${pad}
     <div class="actions">${btn}</div>
   </section>`;
@@ -2181,7 +2209,7 @@ function render() {
   const app = $('#app');
   if (ui.screen === 'entry') app.innerHTML = entryHTML();
   else if (ui.screen === 'connecting' || !S) app.innerHTML = `<div class="wait">${esc(ui.status)}</div>`;
-  else { app.innerHTML = roomHTML() + pickHTML(); fxResult(); fxStart(); fxAfter(); }
+  else { app.innerHTML = roomHTML() + pickHTML() + ruleHTML(); fxResult(); fxStart(); fxAfter(); }
 }
 
 // ---------- events ----------
@@ -2285,6 +2313,8 @@ document.addEventListener('click', e => {
   }
   else if (a === 'start') { if (me.isHost) startGame(); }
   else if (a === 'pick') { if (me.isHost) pickFirst(Number(el.dataset.f)); }
+  else if (a === 'rule') { ui.rule = true; render(); }
+  else if (a === 'rulex') { ui.rule = false; render(); }
   else if (a === 'pickx') { if (me.isHost) { S.phase = 'lobby'; broadcast(); } }
 
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
