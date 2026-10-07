@@ -266,7 +266,8 @@ button:not(:disabled):active{transform:scale(.95)}
 .sgc:disabled{cursor:default}
 .sgc.op{background:#02040b;border-color:rgba(0,240,255,.1);box-shadow:none}
 .sgc.last{border-color:#fff}
-@media(hover:hover){.sgc:not(:disabled):hover{border-color:var(--yl);background:rgba(246,255,0,.12)}}
+@media(hover:hover){.sgc:not(:disabled):hover{border-color:var(--yl);background:rgba(246,255,0,.12)}.sg.tk .sgc:not(:disabled):hover{border-color:var(--mg);background:rgba(255,0,170,.16)}}
+.sg.tk .sgc:not(.op){border-color:rgba(255,0,170,.55);box-shadow:inset 0 0 8px rgba(255,0,170,.2)}
 .sgc .n1{color:var(--cy)}.sgc .n2{color:var(--p3)}.sgc .n3{color:var(--yl)}.sgc .n4{color:var(--p4)}.sgc .n5{color:var(--mg)}
 .gem{width:66%;height:66%;display:flex;align-items:center;justify-content:center;background:currentColor;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);border:0}
 .gem.v2{width:74%;height:74%;clip-path:polygon(25% 4%,75% 4%,100% 50%,75% 96%,25% 96%,0 50%)}
@@ -641,7 +642,7 @@ const GAMES = {
   hitblow: { name: 'ヒット＆ブロー', size: 1, desc: '3桁の数字当て。ヒットとブローを手がかりに、相手の数字を先に当てた方の勝ち。' },
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
-  search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1点か2点で、合計点の多い人の勝ち。' },
+  search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9の盤に隠れたクリスタルを探す。「開ける」で周り8マスのクリスタルの数を調べ、場所を読み切ったら「取る」で得点。外すと−1点。合計点の多い人の勝ち。' },
   energy: { name: 'エナジーライン', size: 1, modes: [2, 3, 4], desc: '六角形のマスを全員同時に進み、通った跡が光の壁になる。相手の壁は見えず、壁や相手にぶつかるとクラッシュ。盤に落ちている稲妻を取るとエナジーが貯まり、エナジーを使うと1ターンに何マスも進める。最後まで走り続けた人の勝ち。' },
   blackjack: { name: 'ブラックジャック', size: 1, modes: [2, 3, 4], desc: 'チップを賭けて、全員でディーラーに挑む。カードの合計を21に近づけ、ディーラーより大きければ勝ち。22以上はバースト。山札は混ぜ直さないので、出たカードを覚えているほど有利。最後にチップの多い人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
@@ -1140,16 +1141,18 @@ function sgAdj(k) {
   return r;
 }
 function sgApply(s, i, c) {
-  const d = s.sh, np = s.np, k = i - 90000;
+  const d = s.sh, np = s.np, tk = i >= 90100, k = i - (tk ? 90100 : 90000);
   if (s.phase !== 'playing' || !d || !c || s.turn !== c || !Number.isInteger(k) || k < 0 || k > 80 || d.op[k] !== -1) return false;
   s.last = k;
   const v = d.it[k];
   if (v) {
-    d.op[k] = 100 + c * 10 + v; d.sc[c] += v; d.left -= v; d.cnt--; d.ev = { k, hit: v, by: c, n: 1 };
-    const o = d.sc.slice(1).sort((a, b) => b - a);
-    if (!d.cnt || o[0] > o[1] + d.left) { const top = o[0], w = []; for (let p = 1; p <= np; p++) if (d.sc[p] === top) w.push(p); finish(s, w.length === 1 ? w[0] : 0, 'search'); }
+    const to = tk ? c : c % np + 1;
+    d.op[k] = 100 + to * 10 + v; d.sc[to] += v; d.left -= v; d.cnt--; d.ev = { k, hit: v, by: to, n: 1, gift: tk ? 0 : c };
+    if (!tk) s.turn = to;
+    if (!d.cnt) { const top = Math.max(...d.sc.slice(1)), w = []; for (let p = 1; p <= np; p++) if (d.sc[p] === top) w.push(p); finish(s, w.length === 1 ? w[0] : 0, 'search'); }
     return true;
   }
+  if (tk) d.sc[c]--;
   const st = [k];
   let n = 0;
   while (st.length) {
@@ -1159,7 +1162,7 @@ function sgApply(s, i, c) {
     d.op[q] = m; n++;
     if (!m) a.forEach(z => { if (d.op[z] === -1) st.push(z); });
   }
-  d.ev = { k, hit: 0, by: c, n };
+  d.ev = { k, hit: 0, by: c, n, miss: tk ? 1 : 0 };
   s.turn = c % np + 1;
   return true;
 }
@@ -1326,7 +1329,7 @@ const RULES = {
   janken: { goal: '9回のじゃんけんで、合計点を相手より多く取る。', how: ['手札は、グー・チョキ・パーがそれぞれ1点・2点・3点の計9枚。', '毎回、お互いに1枚選んで同時に出す。出した手札はなくなる。', '勝った方が、自分の出した手札の点数をもらう。あいこは0点。', '相手の残り手札は見える。'], end: ['9枚すべて出し終えたら終了。合計点の多い方の勝ち、同点は引き分け。'], tip: ['3点の手札をいつ出すかが勝負の分かれ目。'] },
   charge: { goal: 'アタックかビクトリーを決めて、相手を倒す。', how: ['毎ターン、お互いに5つのコマンドから1つ選んで同時に出す。エナジー（EN）1から始まる。', 'チャージ：EN+1。アタックを受けると負け。', 'アタック（EN1消費）：チャージ中の相手を倒す。バリアには防がれる。', 'バリア（消費なし）：アタックを防ぐ。', 'リバース（EN1消費）：相手のアタックとビクトリーを跳ね返して勝つ。それ以外には空振り。', 'ビクトリー（EN3消費）：即勝利。止められるのはリバースだけ。'], end: ['どちらかが倒れるまで続く。'], tip: ['アタック同士・ビクトリー同士は相打ちで続行。', 'ENが足りないコマンドは選べない。相手のENを見て手を読む。'] },
   dice: { goal: '点を貯めて、先に50点へ届く。', how: ['自分の番に「サイコロを振る」か「確定する」を選ぶ。', '振って出た目は、そのターンの点として貯まる。何回でも振れる。', '1が出ると、そのターンに貯めた点はすべて没収されて交代。', '「確定する」と、貯めた点が自分の得点に入って交代。'], end: ['50点以上で確定するとゴール。', '誰かがゴールしても、その周は最後の人まで続く。', '同じ周にゴールした人どうしは、点の高い方が上。同点は同順位。', '3人以上のときは、最後の1人が決まるまで続く。'], tip: ['50点を超えてからも振れる。相手より上を狙うか、確実に止めるか。'] },
-  search: { goal: '隠れているクリスタルを見つけて、合計点を一番多く取る。', how: ['9×9の盤に、クリスタルが6個だけ隠れている。', '自分の番に、マスを1つタップして開ける。', 'クリスタルがあれば得点して、もう1回開けられる。', 'なければ、周り8マスにあるクリスタルの数が出て交代。', 'クリスタルは、ひし形1点（3個）・六角形2点（3個）の合計9点。'], end: ['全部見つかるか、逆転できない点差がついたら終了。', '合計点の多い人の勝ち。'], tip: ['数字を読めば、確実にある場所が分かる。'] },
+  search: { goal: '隠れているクリスタルの場所を推理して、合計点を一番多く取る。', how: ['9×9の盤に、クリスタルが6個だけ隠れている。ひし形1点（3個）・六角形2点（3個）の合計9点。', '自分の番に「開ける」か「取る」を選んで、マスを1つタップする。', '開ける：周り8マスにあるクリスタルの数が出て交代。クリスタルを開けてしまうと、次の番の人の得点になる。', '取る：クリスタルがあれば得点して、もう1回。なければ−1点で交代。'], end: ['クリスタルが全部なくなったら終了。', '合計点の多い人の勝ち。同点は引き分け。'], tip: ['数字を読んで、確実にある場所だけ「取る」。', '点数はマイナスにもなる。'] },
   blackjack: { goal: 'ディーラーに勝ってチップを増やす。最後にチップが一番多い人の勝ち。', how: ['全員100チップで始める。対戦相手はコンピューターのディーラーで、プレイヤーどうしは直接戦わない。', 'ラウンドの最初に、全員が賭けるチップを決める。5チップ単位で自由に決められ、持っている分を全部賭けることもできる。', '全員に2枚ずつ表で配られる。ディーラーは1枚が表、1枚が伏せ。', '順番に「ヒット（1枚引く）」か「スタンド（止める）」を選ぶ。合計が22以上になるとバーストで負け。', '「ダブル」は最初の2枚のときだけ選べる。賭けを2倍にして、1枚だけ引いて止まる。', '全員が終わると、ディーラーが伏せ札を開け、合計17以上になるまで引く。', 'カードの数え方：2〜10は数字のまま、J・Q・Kは10、Aは1か11の都合のいい方。'], end: ['ディーラーより21に近ければ勝ち。賭けた分と同じだけもらえる。', 'ディーラーがバーストしたら、バーストしていない人は全員勝ち。', '同じ合計なら引き分け（PUSH）で、賭けは戻る。', '最初の2枚で21はブラックジャック。賭けの1.5倍もらえる。', 'チップが0になった人は脱落。', '山札が少なくなったら終了。チップの一番多い人の勝ち。'], tip: ['山札は2人なら52枚、3〜4人なら104枚。途中で混ぜ直さない。', '出たカードを覚えておくと、残りに10や絵札が多いかどうかが分かる。'] },
   energy: { goal: 'クラッシュせずに、最後まで走り続ける。', how: ['六角形のマスを、全員が同時に進む。通ったマスは自分の壁になる。', '進むルートを順にタップして「決定する」。全員が決めると一斉に動く。', '1マス目は無料。2マス目からは1マスごとにエナジーを10使う。', '盤に落ちている稲妻マークを取るとエナジー+10（上限50）。', '相手の壁は見えない。見えるのは自分の壁と、全員の今いる位置だけ。'], end: ['壁や、相手が今いるマスに入るとクラッシュ。', '同じマスに同時に飛び込んだら、残りエナジーの多い方だけが残る。同じなら全員クラッシュ。', '周りがすべて壁で動けなくなってもクラッシュ。', '最後まで残った人の勝ち。全員同時なら引き分け。'], tip: ['相手がどこを通ったか覚えておく。', '稲妻が消えた場所は、誰かが通った場所。'] }
 };
@@ -1636,12 +1639,12 @@ function elBoardHTML() {
 }
 function sgBoardHTML() {
   const d = S.sh, my = colorOf(me.cid), over = S.phase === 'result', can = !over && my && S.turn === my && !ui.offline;
-  const mv = (S.gno || 0) + ':' + (S.mv || 0);
+  const mv = (S.gno || 0) + ':' + (S.mv || 0), tk = can && ui.sgTk;
   if (!ui.sgP || ui.sgP.gid !== d.gid) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: null };
   else if (ui.sgP.mv !== mv) ui.sgP = { gid: d.gid, mv, op: d.op.slice(), prev: ui.sgP.op };
   const prev = ui.sgP.prev, lx = S.last % 9, ly = Math.floor(S.last / 9);
   const gem = (v, cls) => `<i class="gem v${v} ${cls}"><u>${v}</u></i>`;
-  let h = '<div class="sg">';
+  let h = `<div class="sg${tk ? ' tk' : ''}">`;
   for (let i = 0; i < 81; i++) {
     const o = d.op[i], nw = prev && prev[i] === -1 && o !== -1, fd = Math.max(Math.abs(i % 9 - lx), Math.abs(Math.floor(i / 9) - ly));
     const body = o >= 100 ? gem(o % 10, 'c' + Math.floor((o - 100) / 10)) : o > 0 ? `<b class="n${Math.min(o, 5)}">${o}</b>` : o === -1 && over && d.it && d.it[i] ? gem(d.it[i], 'un') : '';
@@ -1908,7 +1911,7 @@ function msgHTML() {
   const g = !(my && S.turn === my) ? '' : S.game === 'gomoku' ? '<small>マスをタップして選び、「ここに置く」で確定' + (my === 1 && NP() === 2 ? '。×は禁じ手（三三・四四・長連）で置けません' : '') + '</small>'
     : GAMES[S.game].dk ? '<small>マスをタップして選び、「ここに打つ」で確定。4点' + (S.dt && S.dt.kind === 'ci' ? 'が同じ円の上（一直線も含む）' : 'で正方形') + 'になると、打った人の負け</small>'
     : S.game === 'gobblet' ? '<small>手持ちか盤上の自分のコマを選び、置き先をタップ（自分より小さいコマには被せられます）</small>'
-    : S.game === 'search' ? '<small>マスをタップして開けます。クリスタルを見つけたらもう1回。数字は周り8マスにあるクリスタルの数です</small>'
+    : S.game === 'search' ? (ui.sgTk ? '<small>「取る」：クリスタルがあれば得点してもう1回。なければ−1点で交代です</small>' : '<small>「開ける」：周り8マスにあるクリスタルの数が出ます。クリスタルを開けてしまうと次の人の得点です</small>')
     : S.game === 'dice' ? (S.dc.pend.length ? `<small>${S.dc.pend.map(c => esc(nameOf(c)) + ' ' + S.dc.sc[c] + '点').join('、')} でゴール済み。この周のうちに上回れば逆転できます</small>` : '<small>振るたびに点が貯まります。1が出ると、このターンの点は没収です</small>')
     : S.game !== 'quoridor' ? '' : ui.qmode === 'move' ? '<small>光っているマスをタップしてコマを動かす（ゴールは自分の色の線がある辺）</small>'
     : '<small>黄色い点をタップして壁の位置を選び、「ここに置く」で確定</small>';
@@ -1999,6 +2002,7 @@ function mainHTML() {
       else if (d.ph === 'done') pad = '<div class="pad"><button class="put" data-act="bjmv" data-v="120003">次のラウンドへ</button></div>';
     }
     if (S.game === 'energy' && my && S.el.alive[my] && !S.el.pick[my] && !ui.offline) { const n = (ui.elPath || []).length; pad = `<div class="pad"><button class="wide" data-act="elundo" ${n ? '' : 'disabled'}>1マス戻す</button><button class="put" data-act="elgo" ${n ? '' : 'disabled'}>${n > 1 ? '決定する（EN -' + 10 * (n - 1) + '）' : '決定する'}</button></div>`; }
+    if (S.game === 'search' && my && S.turn === my && !ui.offline) pad = `<div class="pad"><button class="${ui.sgTk ? 'wide' : 'put'}" data-act="sgmode" data-v="0">開ける</button><button class="${ui.sgTk ? 'put' : 'wide'}" data-act="sgmode" data-v="1">取る</button></div>`;
     if (S.game === 'dice' && my && S.turn === my && !ui.offline) pad = `<div class="pad"><button class="wide" data-act="dcroll">サイコロを振る</button><button class="put" data-act="dcbank" ${S.dc.pot ? '' : 'disabled'}>確定する${S.dc.pot ? '（+' + S.dc.pot + '）' : ''}</button></div>`;
     if (my && NP() === 2) btn += `<button class="btn sm mg" data-act="resign">投了する</button>`;
     if (host) btn += `<button class="btn sm" data-act="lobby">中断してゲーム選択に戻る</button>`;
@@ -2207,7 +2211,8 @@ function fxAfter() {
       sfx('ping', .9 + e.hit * .25); if (e.hit > 1) setTimeout(() => sfx('ping', 1.3 + e.hit * .25), 110);
       if (e.hit === 3) { sfx('clash'); flash(); vib([30, 40, 80]); } else vib(20);
       if (r) burst(r.left + r.width / 2, r.top + r.height / 2, r.width * .7, ['#fff', 'var(--cy)', 'var(--mg)', 'var(--p3)', 'var(--p4)'][e.by], 6 + e.hit * 6, e.hit === 3 ? 1.6 : 1);
-    } else { sfx('place', 1.6); for (let k = 1; k < Math.min(e.n, 9); k++) setTimeout(() => sfx('flip', .9 + k * .07), k * 45); }
+    } else if (e.miss) { sfx('wall'); vib([30, 40, 60]); }
+    else { sfx('place', 1.6); for (let k = 1; k < Math.min(e.n, 9); k++) setTimeout(() => sfx('flip', .9 + k * .07), k * 45); }
     return;
   }
   if (g === 'dice') {
@@ -2429,7 +2434,8 @@ document.addEventListener('click', e => {
       act({ t: 'move', i: 100000000 + code }); render();
     }
   }
-  else if (a === 'sgopen') act({ t: 'move', i: 90000 + Number(el.dataset.i) });
+  else if (a === 'sgopen') { const tk = ui.sgTk; ui.sgTk = 0; act({ t: 'move', i: (tk ? 90100 : 90000) + Number(el.dataset.i) }); }
+  else if (a === 'sgmode') { ui.sgTk = Number(el.dataset.v); sfx('tap'); render(); }
   else if (a === 'dcroll') act({ t: 'move', i: 80000 });
   else if (a === 'dcbank') act({ t: 'move', i: 80001 });
   else if (a === 'dput') { const i = ui.dSel; if (i >= 0) { ui.dSel = -1; act({ t: 'move', i: 50000 + i }); render(); } }
