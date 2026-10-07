@@ -218,7 +218,8 @@ button:not(:disabled):active{transform:scale(.95)}
 @media(prefers-reduced-motion:reduce){.hold *,.enter *{animation:none!important}.tchip{display:none}}
 .el{display:block;width:min(100%,520px);margin:8px auto 6px;overflow:visible}
 .hx{fill:#05080f;stroke:rgba(0,240,255,.26);stroke-width:.35}
-.hx.z2{fill:#061826}.hx.z4{fill:#0a2a3d}.hx.z8{fill:#35380a}
+.eldp{fill:var(--yl);stroke:#fff;stroke-width:.3;pointer-events:none;filter:drop-shadow(0 0 2px var(--yl));transform-box:fill-box;transform-origin:center;animation:blink 1.2s ease-in-out infinite}
+.fx .eldp.nw{animation:finpop .4s cubic-bezier(.2,1.8,.4,1) calc(var(--st,0) * 220ms + 150ms) both}
 .hx.tr{fill:currentColor;fill-opacity:.5;stroke:currentColor;stroke-width:.5}
 .hx.cand{fill:rgba(246,255,0,.3);stroke:var(--yl);stroke-width:.8;cursor:pointer;animation:blink 1s ease-in-out infinite}
 .hx.sel{fill:rgba(246,255,0,.75);stroke:#fff;stroke-width:.8;cursor:pointer}
@@ -602,7 +603,7 @@ const GAMES = {
   janken: { name: 'ナインじゃんけん', size: 1, desc: '1〜3点のグー・チョキ・パー計9枚で9回勝負。勝った手の点数が入り、合計点の多い方の勝ち。' },
   dice: { name: 'チキンダイス', size: 1, modes: [2, 3, 4], desc: 'サイコロを振るたびに点が貯まるが、1が出るとそのターンの点は没収。振るか止めるかの度胸くらべ。先に50点へ届いた人の勝ち。同じ周に届いた人どうしは、点の高い方が上。' },
   search: { name: 'サーチトレジャー', size: 1, modes: [2, 3, 4], desc: '9×9のマスを順番に開けてクリスタルを探す。見つけたら得点してもう1回、外れたら周り8マスにあるクリスタルの数が出て交代。クリスタルは1〜3点で、合計点の多い人の勝ち。' },
-  energy: { name: 'エナジーライン', size: 1, modes: [2, 3, 4], desc: '六角形のマスを全員同時に進み、通った跡が光の壁になる。相手の壁は見えず、壁や相手にぶつかるとクラッシュ。中央ほどエナジーが貯まり、エナジーを使うと1ターンに何マスも進める。最後まで走り続けた人の勝ち。' },
+  energy: { name: 'エナジーライン', size: 1, modes: [2, 3, 4], desc: '六角形のマスを全員同時に進み、通った跡が光の壁になる。相手の壁は見えず、壁や相手にぶつかるとクラッシュ。盤に落ちている稲妻を取るとエナジーが貯まり、エナジーを使うと1ターンに何マスも進める。最後まで走り続けた人の勝ち。' },
   charge: { name: 'チャージ＆アタック', size: 1, desc: '5つのコマンドから毎ターン同時に1つ選ぶ読み合い。相手を倒した方の勝ち。' },
   dots: { name: 'ドット＆シェイプ', size: 7, modes: [2, 3, 4], dk: 1, vars: [['sq', 'スクエア'], ['ci', 'サークル']], desc: '8×8。順番にドットを打ち、4つのドットで形を作ってしまった人の負け。正方形のスクエアモードと、同じ円周に乗るサークルモード。' }
 };
@@ -937,15 +938,28 @@ const EDIR = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 function elIdx(R, q, r) { return Math.abs(q) <= R && Math.abs(r) <= R && Math.abs(q + r) <= R ? (r + R) * (2 * R + 1) + q + R : -1; }
 function elQR(R, i) { const W = 2 * R + 1; return [i % W - R, Math.floor(i / W) - R]; }
 function elAdj(R, i) { const a = elQR(R, i); return EDIR.map(d => elIdx(R, a[0] + d[0], a[1] + d[1])); }
-function elGain(R, i) { const a = elQR(R, i), ring = R - (Math.abs(a[0]) + Math.abs(a[1]) + Math.abs(a[0] + a[1])) / 2; return ring <= 1 ? 0 : ring === 2 ? 2 : ring === 3 ? 4 : 8; }
+function elDrop(d, far) {
+  const o = [];
+  for (let i = 0; i < d.tr.length; i++) {
+    const a = elQR(d.R, i);
+    if (elIdx(d.R, a[0], a[1]) < 0 || d.tr[i] || d.dr.includes(i)) continue;
+    if (far && d.pos.some((p, c) => { if (!c) return false; const b = elQR(d.R, p), q = a[0] - b[0], r = a[1] - b[1]; return (Math.abs(q) + Math.abs(r) + Math.abs(q + r)) / 2 < 2; })) continue;
+    o.push(i);
+  }
+  if (!o.length) return -1;
+  const x = o[Math.floor(Math.random() * o.length)];
+  d.dr.push(x);
+  return x;
+}
 function elInit(np) {
   const R = 6, W = 2 * R + 1, st = np === 2 ? [0, 3] : np === 3 ? [0, 2, 4] : [0, 1, 3, 4];
-  const d = { R, tr: new Array(W * W).fill(0), pos: [0], en: [0], alive: [0], pick: [null], log: null, n: 0, cap: 50, gid: Math.random().toString(36).slice(2, 8) };
-  st.forEach((k, j) => { const i = elIdx(R, EDIR[k][0] * R, EDIR[k][1] * R); d.pos.push(i); d.en.push(10); d.alive.push(1); d.pick.push(null); d.tr[i] = j + 1; });
+  const d = { R, tr: new Array(W * W).fill(0), pos: [0], en: [0], alive: [0], pick: [null], log: null, n: 0, cap: 50, dr: [], gid: Math.random().toString(36).slice(2, 8) };
+  st.forEach((k, j) => { const i = elIdx(R, EDIR[k][0] * 3, EDIR[k][1] * 3); d.pos.push(i); d.en.push(10); d.alive.push(1); d.pick.push(null); d.tr[i] = j + 1; });
+  for (let k = 0; k < 6; k++) elDrop(d, true);
   return d;
 }
 function elResolve(s) {
-  const d = s.el, np = s.np, P = d.pick, rem = [0], dead = {}, log = { n: d.n + 1, mv: [], cr: [], steps: 0 };
+  const d = s.el, np = s.np, P = d.pick, rem = [0], dead = {}, log = { n: d.n + 1, mv: [], cr: [], pk: [], sp: -1, steps: 0 };
   for (let c = 1; c <= np; c++) { rem[c] = d.alive[c] ? d.en[c] - 10 * (P[c].length - 1) : 0; if (d.alive[c]) log.steps = Math.max(log.steps, P[c].length); }
   for (let t = 0; t < log.steps; t++) {
     const tg = {};
@@ -957,15 +971,20 @@ function elResolve(s) {
     Object.keys(tg).forEach(k => {
       const x = Number(k), g = tg[k], mx = Math.max.apply(null, g.map(c => rem[c])), top = g.filter(c => rem[c] === mx);
       g.forEach(c => { if (top.length > 1 || c !== top[0]) { dead[c] = 1; log.cr.push([c, x, t, 'clash']); } });
-      if (top.length === 1) { d.pos[top[0]] = x; d.tr[x] = top[0]; log.mv.push([x, top[0], t]); }
+      if (top.length === 1) {
+        d.pos[top[0]] = x; d.tr[x] = top[0]; log.mv.push([x, top[0], t]);
+        const k = d.dr.indexOf(x);
+        if (k >= 0) { d.dr.splice(k, 1); rem[top[0]] += 10; log.pk.push([x, top[0], t]); }
+      }
     });
   }
   for (let c = 1; c <= np; c++) {
     if (!d.alive[c]) continue;
-    if (dead[c]) d.alive[c] = 0; else d.en[c] = Math.min(d.cap, rem[c] + elGain(d.R, d.pos[c]));
+    if (dead[c]) d.alive[c] = 0; else d.en[c] = Math.min(d.cap, rem[c]);
   }
   for (let c = 1; c <= np; c++) if (d.alive[c] && elAdj(d.R, d.pos[c]).every(x => x < 0 || d.tr[x])) { dead[c] = 1; log.cr.push([c, d.pos[c], log.steps, 'stuck']); }
   for (let c = 1; c <= np; c++) { if (dead[c]) d.alive[c] = 0; d.pick[c] = null; }
+  if (d.dr.length < 6) log.sp = elDrop(d, false);
   d.n++; d.log = log;
   const al = [];
   for (let c = 1; c <= np; c++) if (d.alive[c]) al.push(c);
@@ -1449,13 +1468,14 @@ function elBoardHTML() {
     if (elIdx(R, a[0], a[1]) < 0) continue;
     const c = xy(i), o = all || d.tr[i] === my || d.pos.indexOf(i) > 0 ? d.tr[i] : 0, k = path.indexOf(i);
     const pts = [0, 1, 2, 3, 4, 5].map(n => (c[0] + s * .95 * Math.cos((30 + 60 * n) * Math.PI / 180)).toFixed(2) + ',' + (c[1] + s * .95 * Math.sin((30 + 60 * n) * Math.PI / 180)).toFixed(2)).join(' ');
-    cells += `<polygon class="hx z${elGain(R, i)}${o ? ' tr c' + o : ''}${cand.includes(i) ? ' cand' : ''}${k >= 0 ? ' sel' : ''}${st[i] !== undefined ? ' nw' : ''}" style="--st:${st[i] || 0}" points="${pts}" data-act="elcell" data-i="${i}"/>`;
+    cells += `<polygon class="hx${o ? ' tr c' + o : ''}${cand.includes(i) ? ' cand' : ''}${k >= 0 ? ' sel' : ''}${st[i] !== undefined ? ' nw' : ''}" style="--st:${st[i] || 0}" points="${pts}" data-act="elcell" data-i="${i}"/>`;
+    if (d.dr.includes(i) && k < 0) marks += `<path class="eldp${anim && L.sp === i ? ' nw' : ''}" style="--st:${anim ? L.steps : 0}" transform="translate(${c[0].toFixed(2)} ${c[1].toFixed(2)})" d="M1-5.2-3.4.9h2.6L-1.2 5.2 3.4-1.1H.7z"/>`;
     if (k >= 0) marks += `<text class="eltx" x="${c[0].toFixed(2)}" y="${c[1].toFixed(2)}">${k + 1}</text>`;
   }
   for (let p = 1; p <= NP(); p++) { const c = xy(d.pos[p]); marks += `<circle class="elhd c${p}${d.alive[p] ? '' : ' dd'}" style="--st:${anim ? L.steps : 0}" cx="${c[0].toFixed(2)}" cy="${c[1].toFixed(2)}" r="${s * .5}"/>`; }
   if (anim) L.cr.forEach(m => { const c = xy(m[1]); marks += `<text class="crx" style="--st:${m[2]}" x="${c[0].toFixed(2)}" y="${c[1].toFixed(2)}">✕</text>`; });
   const hw = s * 1.732 * (R + .6), hh = s * (1.5 * R + 1.1);
-  return `<svg class="el" viewBox="${(-hw).toFixed(1)} ${(-hh).toFixed(1)} ${(2 * hw).toFixed(1)} ${(2 * hh).toFixed(1)}">${cells}${marks}</svg><p class="dcgoal">ENERGY ZONE ■ 外側2周 +0 ／ +2 ／ +4 ／ 中央 +8</p>`;
+  return `<svg class="el" viewBox="${(-hw).toFixed(1)} ${(-hh).toFixed(1)} ${(2 * hw).toFixed(1)} ${(2 * hh).toFixed(1)}">${cells}${marks}</svg><p class="dcgoal">ENERGY ■ 稲妻マークを取ると +10（上限 ${d.cap}）</p>`;
 }
 function sgBoardHTML() {
   const d = S.sh, my = colorOf(me.cid), over = S.phase === 'result', can = !over && my && S.turn === my && !ui.offline;
@@ -1696,7 +1716,7 @@ function msgHTML() {
   if (S.game === 'energy') {
     const d = S.el, n = (ui.elPath || []).length;
     const m = !my ? '観戦中' : !d.alive[my] ? 'クラッシュしました — 観戦中' : d.pick[my] ? 'ほかのプレイヤーを待っています…' : '進むルートを選んでください';
-    const sub = my && d.alive[my] && !d.pick[my] ? (n ? `${n}マス進む（エナジー -${10 * (n - 1)}）。最後のマスをタップすると1つ戻せます` : '光っているマスを順にタップ。1マス目は無料、2マス目からは1マスごとにエナジー10。相手の壁は見えません') : `ターン ${d.n + 1}`;
+    const sub = my && d.alive[my] && !d.pick[my] ? (n ? `${n}マス進む（エナジー -${10 * (n - 1)}）。最後のマスをタップすると1つ戻せます` : '光っているマスを順にタップ。1マス目は無料、2マス目からは1マスごとにエナジー10。稲妻を取るとエナジー+10。相手の壁は見えません') : `ターン ${d.n + 1}`;
     return `<div class="msg">${m}<small>${sub}</small></div>`;
   }
   if (S.game === 'charge') {
@@ -1982,6 +2002,7 @@ function fxAfter() {
     if (!L || ui.elFx === key) { sfx('ready'); return; }
     ui.elFx = key;
     for (let k = 0; k < L.steps; k++) setTimeout(() => sfx('place', 1.2 + k * .14), k * 220);
+    L.pk.forEach(m => setTimeout(() => { sfx('ping', 1.4); setTimeout(() => sfx('ping', 1.9), 80); }, m[2] * 220 + 60));
     L.cr.forEach(m => setTimeout(() => {
       sfx('clash'); flash(); vib([30, 40, 80]);
       const e = q('.hx[data-i="' + m[1] + '"]'), r = e && e.getBoundingClientRect();
