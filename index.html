@@ -2481,6 +2481,8 @@ document.addEventListener('click', e => {
     else if (x >= 0 && x < n && y >= 0 && y < n) { ui.sel = y * n + x; render(); }
   }
   else if (a === 'resign') { if (confirm('投了しますか？')) act({ t: 'resign' }); }
+  else if (a === 'rule') { ui.rule = true; render(); }
+  else if (a === 'rulex') { ui.rule = false; render(); }
   else if (!host || !S) return;
   else if (a === 'game') { if (S.phase === 'lobby' && GAMES[el.dataset.g]) { S.game = el.dataset.g; setNp((GAMES[S.game].modes || []).includes(S.np) ? S.np : 2); broadcast(); } }
   else if (a === 'dvar') { if (S.phase === 'lobby') { S.dv = el.dataset.v === 'ci' ? 'ci' : 'sq'; broadcast(); } }
@@ -2493,8 +2495,6 @@ document.addEventListener('click', e => {
   }
   else if (a === 'start') { if (me.isHost) startGame(); }
   else if (a === 'pick') { if (me.isHost) pickFirst(Number(el.dataset.f)); }
-  else if (a === 'rule') { ui.rule = true; render(); }
-  else if (a === 'rulex') { ui.rule = false; render(); }
   else if (a === 'pickx') { if (me.isHost) { S.phase = 'lobby'; broadcast(); } }
 
   else if (a === 'lobby') { if (S.phase !== 'playing' || confirm('ゲームを中断しますか？')) { S.phase = 'lobby'; S.members = S.members.filter(m => m.online || m.role !== 'spec'); broadcast(); } }
